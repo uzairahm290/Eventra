@@ -103,7 +103,7 @@ const Register: React.FC = () => {
                     required
                     value={formData.firstName}
                     onChange={handleChange}
-                    className="input-field pl-10"
+                    className="block w-full pl-10 pr-10 py-2 rounded-md border border-gray-300"
                     placeholder="John"
                   />
                 </div>
@@ -124,7 +124,7 @@ const Register: React.FC = () => {
                     required
                     value={formData.lastName}
                     onChange={handleChange}
-                    className="input-field pl-10"
+                    className="block w-full pl-10 pr-10 py-2 rounded-md border border-gray-300"
                     placeholder="Doe"
                   />
                 </div>
@@ -147,7 +147,7 @@ const Register: React.FC = () => {
                   required
                   value={formData.username}
                   onChange={handleChange}
-                  className="input-field pl-10"
+                  className="block w-full pl-10 pr-10 py-2 rounded-md border border-gray-300"
                   placeholder="johndoe"
                 />
               </div>
@@ -169,7 +169,7 @@ const Register: React.FC = () => {
                   required
                   value={formData.email}
                   onChange={handleChange}
-                  className="input-field pl-10"
+                  className="block w-full pl-10 pr-10 py-2 rounded-md border border-gray-300"
                   placeholder="john@example.com"
                 />
               </div>
@@ -192,7 +192,7 @@ const Register: React.FC = () => {
                     required
                     value={formData.password}
                     onChange={handleChange}
-                    className="input-field pl-10 pr-10"
+                    className="block w-full pl-10 pr-10 py-2 rounded-md border border-gray-300"
                     placeholder="••••••••"
                   />
                   <button
@@ -224,7 +224,7 @@ const Register: React.FC = () => {
                     required
                     value={formData.confirmPassword}
                     onChange={handleChange}
-                    className="input-field pl-10 pr-10"
+                    className="block w-full pl-10 pr-10 py-2 rounded-md border border-gray-300"
                     placeholder="••••••••"
                   />
                   <button
