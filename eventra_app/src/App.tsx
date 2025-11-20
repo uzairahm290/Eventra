@@ -97,3 +97,18 @@ function App() {
 }
 
 export default App;
+
+
+
+
+// import Welcome from "./pages/welcome";
+
+// function App() {
+//   return (
+//     <div className="flex justify-center items-center h-screen bg-gray-100">
+//       <Welcome />
+//     </div>
+//   );
+// }
+
+// export default App;
