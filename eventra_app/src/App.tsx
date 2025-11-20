@@ -12,6 +12,11 @@ import Clients from './pages/Clients';
 import Bookings from './pages/Bookings';
 import Profile from './pages/Profile';
 import Settings from './pages/Settings';
+import Calendar from './pages/Calendar';
+import Reports from './pages/Reports';
+import EventDetails from './pages/EventDetails';
+import CreateEvent from './pages/CreateEvent';
+import Help from './pages/Help';
 import './App.css';
 
 // Protected Route Component
@@ -58,16 +63,21 @@ function AppRoutes() {
       >
         <Route index element={<Dashboard />} />
         <Route path="events" element={<Events />} />
+        <Route path="events/:id" element={<EventDetails />} />
+        <Route path="events/create" element={<CreateEvent />} />
         <Route path="venues" element={<Venues />} />
         <Route path="clients" element={<Clients />} />
         <Route path="bookings" element={<Bookings />} />
+        <Route path="calendar" element={<Calendar />} />
+        <Route path="reports" element={<Reports />} />
         <Route path="profile" element={<Profile />} />
         <Route path="settings" element={<Settings />} />
+        <Route path="help" element={<Help />} />
       </Route>
 
       {/* Redirect root to login */}
       <Route path="/" element={<Navigate to="/login" replace />} />
-      
+
       {/* 404 - Redirect to login */}
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>

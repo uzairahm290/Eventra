@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { 
-  FiHome, FiCalendar, FiMapPin, FiUsers, FiBookOpen, 
+import { motion } from 'framer-motion';
+import {
+  FiHome, FiCalendar, FiMapPin, FiUsers, FiBookOpen,
   FiMenu, FiX, FiBell, FiUser, FiLogOut, FiSettings,
-  FiSearch
+  FiSearch, FiBarChart2, FiHelpCircle
 } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
 // Theme toggle removed to restore light-only theme
@@ -21,6 +22,9 @@ const DashboardLayout: React.FC = () => {
     { name: 'Venues', href: '/dashboard/venues', icon: FiMapPin },
     { name: 'Clients', href: '/dashboard/clients', icon: FiUsers },
     { name: 'Bookings', href: '/dashboard/bookings', icon: FiBookOpen },
+    { name: 'Calendar', href: '/dashboard/calendar', icon: FiCalendar },
+    { name: 'Reports', href: '/dashboard/reports', icon: FiBarChart2 },
+    { name: 'Help', href: '/dashboard/help', icon: FiHelpCircle },
   ];
 
   const handleLogout = () => {
@@ -29,15 +33,14 @@ const DashboardLayout: React.FC = () => {
   };
 
   return (
-  <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50">
       {/* Sidebar */}
       <div
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        } lg:translate-x-0`}
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          } lg:translate-x-0`}
       >
         {/* Logo */}
-  <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200">
+        <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200">
           <div className="flex items-center space-x-3">
             <div className="bg-gradient-to-r from-primary-600 to-cyan-600 p-2 rounded-lg">
               <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -55,22 +58,27 @@ const DashboardLayout: React.FC = () => {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-4 py-6 space-y-1">
-          {navigation.map((item) => {
+        <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto max-h-[calc(100vh-200px)]">
+          {navigation.map((item, index) => {
             const isActive = location.pathname === item.href;
             return (
-              <Link
+              <motion.div
                 key={item.name}
-                to={item.href}
-                className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
-                  isActive
-                    ? 'bg-primary-50 text-primary-700 shadow-sm'
-                    : 'text-gray-700 hover:bg-gray-100'
-                }`}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.05 }}
               >
-                <item.icon className={`mr-3 h-5 w-5 ${isActive ? 'text-primary-600' : 'text-gray-500'}`} />
-                {item.name}
-              </Link>
+                <Link
+                  to={item.href}
+                  className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${isActive
+                      ? 'bg-primary-50 text-primary-700 shadow-sm'
+                      : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                >
+                  <item.icon className={`mr-3 h-5 w-5 ${isActive ? 'text-primary-600' : 'text-gray-500'}`} />
+                  {item.name}
+                </Link>
+              </motion.div>
             );
           })}
         </nav>

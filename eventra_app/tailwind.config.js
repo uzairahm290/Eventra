@@ -52,6 +52,15 @@ export default {
           600: '#dc2626',
           700: '#b91c1c',
         },
+        // Added for modern look
+        indigo: {
+          500: '#6366f1',
+          600: '#4f46e5',
+        },
+        violet: {
+          500: '#8b5cf6',
+          600: '#7c3aed',
+        },
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
@@ -59,6 +68,26 @@ export default {
       boxShadow: {
         'soft': '0 2px 15px 0 rgba(0, 0, 0, 0.05)',
         'soft-xl': '0 10px 40px 0 rgba(0, 0, 0, 0.08)',
+        'glass': '0 8px 32px 0 rgba(31, 38, 135, 0.37)',
+      },
+      animation: {
+        'fade-in': 'fadeIn 0.5s ease-out',
+        'slide-up': 'slideUp 0.5s ease-out',
+        'slide-in-right': 'slideInRight 0.3s ease-out',
+      },
+      keyframes: {
+        fadeIn: {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+        slideUp: {
+          '0%': { transform: 'translateY(20px)', opacity: '0' },
+          '100%': { transform: 'translateY(0)', opacity: '1' },
+        },
+        slideInRight: {
+          '0%': { transform: 'translateX(100%)' },
+          '100%': { transform: 'translateX(0)' },
+        },
       },
     },
   },
