@@ -7,6 +7,7 @@ interface User {
   firstName: string;
   lastName: string;
   role: string;
+  avatarUrl?: string;
 }
 
 interface AuthContextType {
@@ -61,7 +62,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         email: `${username}@eventra.com`,
         firstName: 'John',
         lastName: 'Doe',
-        role: 'Admin'
+        role: 'Admin',
+        avatarUrl: ''
       };
       const mockToken = 'mock-jwt-token-' + Date.now();
 
@@ -83,7 +85,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         email: userData.email,
         firstName: userData.firstName,
         lastName: userData.lastName,
-        role: 'User'
+        role: 'User',
+        avatarUrl: ''
       };
       const mockToken = 'mock-jwt-token-' + Date.now();
 
