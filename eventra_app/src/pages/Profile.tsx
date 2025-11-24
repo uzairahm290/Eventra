@@ -45,7 +45,7 @@ const Profile: React.FC = () => {
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <FiUser className="h-5 w-5 text-gray-400" />
               </div>
-              <input className="input-field pl-10" value={firstName} onChange={(e)=>setFirstName(e.target.value)} />
+              <input className="block w-full pl-10 pr-10 py-2 rounded-md border border-gray-300" value={firstName} onChange={(e)=>setFirstName(e.target.value)} />
             </div>
           </div>
           <div>
@@ -54,7 +54,7 @@ const Profile: React.FC = () => {
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <FiUser className="h-5 w-5 text-gray-400" />
               </div>
-              <input className="input-field pl-10" value={lastName} onChange={(e)=>setLastName(e.target.value)} />
+              <input className="block w-full pl-10 pr-10 py-2 rounded-md border border-gray-300" value={lastName} onChange={(e)=>setLastName(e.target.value)} />
             </div>
           </div>
           <div>
@@ -63,7 +63,7 @@ const Profile: React.FC = () => {
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <FiHash className="h-5 w-5 text-gray-400" />
               </div>
-              <input className="input-field pl-10" value={username} onChange={(e)=>setUsername(e.target.value)} />
+              <input className="block w-full pl-10 pr-10 py-2 rounded-md border border-gray-300" value={username} onChange={(e)=>setUsername(e.target.value)} />
             </div>
           </div>
           <div>
@@ -72,7 +72,7 @@ const Profile: React.FC = () => {
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <FiMail className="h-5 w-5 text-gray-400" />
               </div>
-              <input className="input-field pl-10" value={email} onChange={(e)=>setEmail(e.target.value)} />
+              <input className="block w-full pl-10 pr-10 py-2 rounded-md border border-gray-300" value={email} onChange={(e)=>setEmail(e.target.value)} />
             </div>
           </div>
           </div>
