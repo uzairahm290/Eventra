@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FiMail, FiLock, FiUser, FiEye, FiEyeOff } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
+import Modal from '../components/Modal';
 
 const Register: React.FC = () => {
   const navigate = useNavigate();
@@ -18,6 +19,7 @@ const Register: React.FC = () => {
     confirmPassword: ''
   });
   const [error, setError] = useState('');
+  const [termsOpen, setTermsOpen] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -253,11 +255,26 @@ const Register: React.FC = () => {
               />
               <label htmlFor="terms" className="ml-2 block text-sm text-gray-700">
                 I agree to the{' '}
-                <a href="#" className="text-primary-600 hover:text-primary-500">
+                <button type="button" onClick={() => setTermsOpen(true)} className="text-primary-600 hover:text-primary-500 underline">
                   Terms and Conditions
-                </a>
+                </button>
               </label>
             </div>
+
+            {/* Terms Modal */}
+            <Modal open={termsOpen} onClose={() => setTermsOpen(false)} title="Terms and Conditions">
+              <div className="prose max-h-72 overflow-y-auto">
+                <h4>Terms and Conditions</h4>
+                <p>By creating an account you agree to use Eventra in accordance with these terms. Do not use the service for illegal activities.</p>
+                <h5>Privacy</h5>
+                <p>We collect basic account information (name, username, email) to provide the service. We will not sell your personal data; see the privacy policy for details.</p>
+                <h5>Account Security</h5>
+                <p>You are responsible for keeping your password secure. Notify support if you suspect unauthorized access.</p>
+                <h5>Termination</h5>
+                <p>We reserve the right to suspend or terminate accounts that violate these terms or engage in abusive behavior.</p>
+                <p className="mt-4">Questions? Contact <a href="mailto:support@eventra.com" className="text-primary-600">support@eventra.com</a>.</p>
+              </div>
+            </Modal>
 
             {/* Submit Button */}
             <button
