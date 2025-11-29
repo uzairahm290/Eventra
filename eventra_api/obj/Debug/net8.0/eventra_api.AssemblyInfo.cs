@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("eventra_api")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+e3f89c0de1e7a175d0121d4482b8f8870cccda1a")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+2e67187c93a5590debd123755065bcde86fbe24f")]
 [assembly: System.Reflection.AssemblyProductAttribute("eventra_api")]
 [assembly: System.Reflection.AssemblyTitleAttribute("eventra_api")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

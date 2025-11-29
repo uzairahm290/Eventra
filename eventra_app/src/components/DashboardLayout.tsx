@@ -7,7 +7,34 @@ import {
   FiSearch, FiBarChart2, FiHelpCircle, FiCoffee
 } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
-// Theme toggle removed to restore light-only theme
+
+// Helper function to render avatar
+const renderAvatar = (user: any, size: 'small' | 'large' = 'small') => {
+  const sizeClasses = size === 'small' ? 'w-8 h-8' : 'w-10 h-10';
+  const textSizeClasses = size === 'small' ? 'text-sm' : 'text-base';
+
+  if (user?.profileImageBase64) {
+    const imageSrc = user.profileImageBase64.startsWith('data:') 
+      ? user.profileImageBase64 
+      : `data:image/jpeg;base64,${user.profileImageBase64}`;
+    
+    return (
+      <img
+        src={imageSrc}
+        alt={`${user.firstName} ${user.lastName}`}
+        className={`${sizeClasses} rounded-full object-cover`}
+      />
+    );
+  }
+
+  return (
+    <div className={`${sizeClasses} rounded-full bg-gradient-to-r from-primary-600 to-cyan-600 flex items-center justify-center`}>
+      <span className={`text-white font-semibold ${textSizeClasses}`}>
+        {user?.firstName?.charAt(0)}{user?.lastName?.charAt(0)}
+      </span>
+    </div>
+  );
+};
 
 const DashboardLayout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -88,17 +115,13 @@ const DashboardLayout: React.FC = () => {
         <div className="border-t border-gray-200 p-4">
           <div className="flex items-center space-x-3 px-4 py-3 rounded-lg bg-gray-50">
             <div className="flex-shrink-0">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-r from-primary-600 to-cyan-600 flex items-center justify-center">
-                <span className="text-white font-semibold text-sm">
-                  {user?.firstName?.charAt(0)}{user?.lastName?.charAt(0)}
-                </span>
-              </div>
+              {renderAvatar(user, 'large')}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-900 truncate">
                 {user?.firstName} {user?.lastName}
               </p>
-              <p className="text-xs text-gray-500 truncate">{user?.role}</p>
+              <p className="text-xs text-gray-500 truncate">{user?.email}</p>
             </div>
           </div>
         </div>
@@ -145,13 +168,12 @@ const DashboardLayout: React.FC = () => {
               <div className="relative">
                 <button
                   onClick={() => setShowProfileMenu(!showProfileMenu)}
-                  className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-100"
+                  className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100"
                 >
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-r from-primary-600 to-cyan-600 flex items-center justify-center">
-                    <span className="text-white font-semibold text-sm">
-                      {user?.firstName?.charAt(0)}{user?.lastName?.charAt(0)}
-                    </span>
-                  </div>
+                  {renderAvatar(user, 'small')}
+                  <span className="hidden sm:inline text-sm font-medium text-gray-700">
+                    {user?.firstName}
+                  </span>
                 </button>
 
                 {/* Dropdown Menu */}
