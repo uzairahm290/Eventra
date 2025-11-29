@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FiPlus, FiEdit2, FiTrash2, FiDollarSign } from 'react-icons/fi';
+import { FiPlus, FiEdit2, FiTrash2, FiDollarSign, FiEye } from 'react-icons/fi';
 import Modal from '../components/Modal';
 
 interface MenuItem {
@@ -41,15 +41,18 @@ const Menus: React.FC = () => {
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingMenu, setEditingMenu] = useState<MenuItem | null>(null);
+  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [viewId, setViewId] = useState<number | null>(null);
 
   const handleEdit = (menu: MenuItem) => {
     setEditingMenu(menu);
     setShowAddModal(true);
   };
 
-  const handleDelete = (id: number) => {
-    if (window.confirm('Are you sure you want to delete this menu?')) {
-      setMenus(menus.filter(m => m.id !== id));
+  const handleDelete = () => {
+    if (deleteId) {
+      setMenus(menus.filter(m => m.id !== deleteId));
+      setDeleteId(null);
     }
   };
 
@@ -127,13 +130,19 @@ const Menus: React.FC = () => {
               </div>
               <div className="flex space-x-2">
                 <button
+                  onClick={() => setViewId(menu.id)}
+                  className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                >
+                  <FiEye className="w-4 h-4" />
+                </button>
+                <button
                   onClick={() => handleEdit(menu)}
                   className="p-2 text-gray-600 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
                 >
                   <FiEdit2 className="w-4 h-4" />
                 </button>
                 <button
-                  onClick={() => handleDelete(menu.id)}
+                  onClick={() => setDeleteId(menu.id)}
                   className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                 >
                   <FiTrash2 className="w-4 h-4" />
@@ -250,6 +259,84 @@ const Menus: React.FC = () => {
             </button>
           </div>
         </form>
+      </Modal>
+
+      {/* View Modal */}
+      <Modal
+        open={viewId !== null}
+        onClose={() => setViewId(null)}
+        title="Menu Details"
+        maxWidthClass="max-w-2xl"
+      >
+        {viewId && menus.find(m => m.id === viewId) && (() => {
+          const menu = menus.find(m => m.id === viewId)!;
+          return (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">Menu Name</label>
+                  <p className="text-base font-semibold text-gray-900">{menu.name}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">Category</label>
+                  <span className="inline-block text-sm px-3 py-1 bg-blue-50 text-blue-700 rounded-full font-medium">
+                    {menu.category}
+                  </span>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">Price per Person</label>
+                  <p className="text-lg font-bold text-gray-900">${menu.pricePerPerson}</p>
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-500 mb-1">Description</label>
+                  <p className="text-base text-gray-900">{menu.description}</p>
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-500 mb-2">Items Included</label>
+                  <ul className="space-y-2">
+                    {menu.items.map((item, index) => (
+                      <li key={index} className="text-base text-gray-900 flex items-center">
+                        <span className="w-2 h-2 bg-primary-600 rounded-full mr-3"></span>
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+              <div className="flex justify-end pt-4">
+                <button onClick={() => setViewId(null)} className="btn-primary">
+                  Close
+                </button>
+              </div>
+            </div>
+          );
+        })()}
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        open={deleteId !== null}
+        onClose={() => setDeleteId(null)}
+        title="Confirm Delete"
+        maxWidthClass="max-w-md"
+      >
+        <div className="space-y-4">
+          <p className="text-gray-700">Are you sure you want to delete this menu? This action cannot be undone.</p>
+          <div className="flex justify-end space-x-3 pt-2">
+            <button
+              onClick={() => setDeleteId(null)}
+              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleDelete}
+              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+            >
+              Delete
+            </button>
+          </div>
+        </div>
       </Modal>
     </div>
   );
