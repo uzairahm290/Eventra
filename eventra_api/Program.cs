@@ -1,8 +1,70 @@
+using eventra_api.Data;
+using eventra_api.Models;
+using eventra_api.Services; // <-- 1. NEW: Required for TokenService
+using Microsoft.AspNetCore.Authentication.JwtBearer; // <-- NEW: Required for JWT
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens; // <-- NEW: Required for TokenValidationParameters
+using System.Text; // <-- NEW: Required for Encoding.UTF8.GetBytes
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Allow requests from Vite (localhost:5173)
+// ----------------------------------------------------
+// 1. SERVICES CONFIGURATION (builder.Services)
+// ----------------------------------------------------
+
+// Add DbContext for database connection (Entity Framework Core)
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// NEW: Add and Configure ASP.NET Core Identity Services
+builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
+{
+    // Configure password complexity rules 
+    options.Password.RequireDigit = true;
+    options.Password.RequireLowercase = true;
+    options.Password.RequireUppercase = true;
+    options.Password.RequireNonAlphanumeric = true;
+    options.Password.RequiredLength = 8;
+})
+.AddEntityFrameworkStores<AppDbContext>()
+.AddDefaultTokenProviders();
+
+// 2. NEW: Register the Token Service
+builder.Services.AddScoped<TokenService>(); // <-- REGISTER TOKEN SERVICE
+
+// 3. NEW: Add and Configure JWT Bearer Authentication
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = builder.Configuration["Jwt:Issuer"],
+        ValidAudience = builder.Configuration["Jwt:Audience"],
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
+    };
+});
+
+
+// Add services for Controllers
+builder.Services.AddControllers();
+
+// Add services for Swagger/OpenAPI documentation
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
+
+// Allow requests from Vite (localhost:5173) - (Your existing CORS policy)
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowVite", policy =>
@@ -13,21 +75,27 @@ builder.Services.AddCors(options =>
     });
 });
 
-// Add controllers
-builder.Services.AddControllers();
+
+// ----------------------------------------------------
+// 2. MIDDLEWARE CONFIGURATION (app)
+// ----------------------------------------------------
 
 var app = builder.Build();
 
-// Use CORS
+// Configure the HTTP request pipeline.
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
+app.UseHttpsRedirection();
 app.UseCors("AllowVite");
 
-// Map controllers
-app.MapControllers();
+// IMPORTANT: UseAuthentication must come before UseAuthorization
+app.UseAuthentication(); // This now uses your JWT setup
+app.UseAuthorization();
 
-// Simple Welcome Text API (Minimal API)
-app.MapGet("/api/welcome", () =>
-{
-    return Results.Ok("Welcome to my ASP.NET API!");
-});
+app.MapControllers();
 
 app.Run();
