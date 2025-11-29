@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { FiPlus, FiEdit2, FiTrash2, FiDollarSign } from 'react-icons/fi';
+import Modal from '../components/Modal';
 
 interface MenuItem {
   id: number;
@@ -181,6 +182,75 @@ const Menus: React.FC = () => {
           </button>
         </div>
       )}
+
+      {/* Add/Edit Menu Modal */}
+      <Modal 
+        open={showAddModal} 
+        onClose={() => setShowAddModal(false)} 
+        title={editingMenu ? 'Edit Menu' : 'Add New Menu'}
+      >
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          console.log('Menu saved');
+          setShowAddModal(false);
+        }} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Menu Name</label>
+            <input
+              type="text"
+              required
+              className="block w-full px-3 py-2 rounded-md border border-gray-300"
+              placeholder="Classic Wedding Package"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
+            <select className="block w-full px-3 py-2 rounded-md border border-gray-300">
+              <option>Wedding</option>
+              <option>Corporate</option>
+              <option>Party</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Price per Person ($)</label>
+            <input
+              type="number"
+              required
+              className="block w-full px-3 py-2 rounded-md border border-gray-300"
+              placeholder="45"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+            <textarea
+              rows={3}
+              className="block w-full px-3 py-2 rounded-md border border-gray-300"
+              placeholder="Perfect for traditional wedding celebrations"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Items Included (one per line)</label>
+            <textarea
+              rows={4}
+              className="block w-full px-3 py-2 rounded-md border border-gray-300"
+              placeholder="Appetizers&#10;Main Course&#10;Dessert&#10;Beverages"
+            />
+          </div>
+          <div className="flex justify-end space-x-3 pt-4">
+            <button
+              type="button"
+              onClick={() => setShowAddModal(false)}
+              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button type="submit" className="btn-primary">
+              {editingMenu ? 'Update Menu' : 'Add Menu'}
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 };
