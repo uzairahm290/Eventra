@@ -1,8 +1,19 @@
 import React, { useState } from 'react';
-import { FiPlus, FiSearch, FiMapPin, FiUsers, FiDollarSign, FiEdit, FiTrash2, FiEye, FiStar } from 'react-icons/fi';
+import { FiPlus, FiSearch, FiMapPin, FiUsers, FiDollarSign, FiEdit, FiTrash2, FiEye, FiStar, FiX } from 'react-icons/fi';
+import Modal from '../components/Modal';
 
 const Venues: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [editingVenue, setEditingVenue] = useState<any>(null);
+  const [formData, setFormData] = useState({
+    name: '',
+    address: '',
+    capacity: '',
+    pricePerHour: '',
+    amenities: '',
+    image: '',
+  });
 
   const venues = [
     {
@@ -63,7 +74,14 @@ const Venues: React.FC = () => {
           <h1 className="text-3xl font-bold text-gray-900">Venues</h1>
           <p className="mt-2 text-gray-600">Manage your event venues and locations</p>
         </div>
-        <button className="mt-4 sm:mt-0 btn-primary flex items-center">
+        <button 
+          onClick={() => {
+            setEditingVenue(null);
+            setFormData({ name: '', address: '', capacity: '', pricePerHour: '', amenities: '', image: '' });
+            setShowAddModal(true);
+          }}
+          className="mt-4 sm:mt-0 btn-primary flex items-center"
+        >
           <FiPlus className="mr-2 h-5 w-5" />
           Add Venue
         </button>
@@ -171,6 +189,101 @@ const Venues: React.FC = () => {
           </div>
         ))}
       </div>
+
+      {/* Add/Edit Venue Modal */}
+      <Modal 
+        open={showAddModal} 
+        onClose={() => setShowAddModal(false)} 
+        title={editingVenue ? 'Edit Venue' : 'Add New Venue'}
+      >
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          console.log('Venue saved:', formData);
+          setShowAddModal(false);
+        }} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Venue Name</label>
+            <input
+              type="text"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              required
+              className="block w-full px-3 py-2 rounded-md border border-gray-300"
+              placeholder="Grand Ballroom"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Address</label>
+            <input
+              type="text"
+              value={formData.address}
+              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+              required
+              className="block w-full px-3 py-2 rounded-md border border-gray-300"
+              placeholder="123 Main St, Downtown"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Capacity</label>
+              <input
+                type="number"
+                value={formData.capacity}
+                onChange={(e) => setFormData({ ...formData, capacity: e.target.value })}
+                required
+                className="block w-full px-3 py-2 rounded-md border border-gray-300"
+                placeholder="300"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Price/Hour ($)</label>
+              <input
+                type="number"
+                value={formData.pricePerHour}
+                onChange={(e) => setFormData({ ...formData, pricePerHour: e.target.value })}
+                required
+                className="block w-full px-3 py-2 rounded-md border border-gray-300"
+                placeholder="500"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Amenities (comma-separated)</label>
+            <input
+              type="text"
+              value={formData.amenities}
+              onChange={(e) => setFormData({ ...formData, amenities: e.target.value })}
+              className="block w-full px-3 py-2 rounded-md border border-gray-300"
+              placeholder="WiFi, Catering, Parking"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Image URL</label>
+            <input
+              type="url"
+              value={formData.image}
+              onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+              className="block w-full px-3 py-2 rounded-md border border-gray-300"
+              placeholder="https://..."
+            />
+          </div>
+          <div className="flex justify-end space-x-3 pt-4">
+            <button
+              type="button"
+              onClick={() => setShowAddModal(false)}
+              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="btn-primary"
+            >
+              {editingVenue ? 'Update Venue' : 'Add Venue'}
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 };
