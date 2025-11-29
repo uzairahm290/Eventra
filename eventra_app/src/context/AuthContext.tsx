@@ -1,12 +1,13 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { apiService } from '../services/api';
-import type { RegisterRequest, AuthResponse } from '../services/api';
+import type { RegisterRequest, AuthResponse, ProfileResponse } from '../services/api';
 
 interface User {
   id: string;
   email: string;
   firstName: string;
   lastName: string;
+  profileImageBase64?: string;
 }
 
 interface AuthContextType {
@@ -15,6 +16,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   register: (userData: RegisterRequest) => Promise<void>;
   logout: () => void;
+  refreshProfile: () => Promise<void>;
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
@@ -30,7 +32,7 @@ export const useAuth = () => {
   return context;
 };
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -69,6 +71,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         email: response.user.email,
         firstName: response.user.firstName,
         lastName: response.user.lastName,
+        profileImageBase64: response.user.profileImageBase64,
       };
 
       setUser(userData);
@@ -78,6 +81,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Persist to localStorage
       localStorage.setItem('token', response.token);
       localStorage.setItem('user', JSON.stringify(userData));
+
+      // Fetch full profile data to get profile image
+      try {
+        const profileResponse: ProfileResponse = await apiService.get('/Profile');
+        const updatedUser: User = {
+          ...userData,
+          profileImageBase64: profileResponse.profileImageBase64,
+        };
+        setUser(updatedUser);
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+      } catch (profileError) {
+        console.warn('Failed to fetch profile image:', profileError);
+        // Continue without profile image
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Login failed';
       setError(errorMessage);
@@ -99,6 +116,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         email: response.user.email,
         firstName: response.user.firstName,
         lastName: response.user.lastName,
+        profileImageBase64: response.user.profileImageBase64,
       };
 
       setUser(user);
@@ -108,6 +126,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Persist to localStorage
       localStorage.setItem('token', response.token);
       localStorage.setItem('user', JSON.stringify(user));
+
+      // Fetch full profile data to get profile image
+      try {
+        const profileResponse: ProfileResponse = await apiService.get('/Profile');
+        const updatedUser: User = {
+          ...user,
+          profileImageBase64: profileResponse.profileImageBase64,
+        };
+        setUser(updatedUser);
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+      } catch (profileError) {
+        console.warn('Failed to fetch profile image:', profileError);
+        // Continue without profile image
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Registration failed';
       setError(errorMessage);
@@ -126,17 +158,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('user');
   };
 
+  const refreshProfile = async () => {
+    try {
+      const profileResponse: ProfileResponse = await apiService.get('/Profile');
+      if (user) {
+        const updatedUser: User = {
+          ...user,
+          firstName: profileResponse.firstName || user.firstName,
+          lastName: profileResponse.secondName || user.lastName,
+          profileImageBase64: profileResponse.profileImageBase64,
+        };
+        setUser(updatedUser);
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+      }
+    } catch (err) {
+      console.warn('Failed to refresh profile:', err);
+    }
+  };
+
   const value: AuthContextType = {
     user,
     token,
     login,
     register,
     logout,
+    refreshProfile,
     isAuthenticated: !!token,
     isLoading,
     error,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-};
+}
+
+export { AuthProvider };
 
