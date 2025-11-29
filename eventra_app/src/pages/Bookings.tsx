@@ -1,9 +1,20 @@
 import React, { useState } from 'react';
 import { FiPlus, FiSearch, FiCalendar, FiMapPin, FiUser, FiEdit, FiTrash2, FiEye, FiCheckCircle } from 'react-icons/fi';
+import Modal from '../components/Modal';
 
 const Bookings: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [formData, setFormData] = useState({
+    client: '',
+    venue: '',
+    event: '',
+    date: '',
+    startTime: '',
+    endTime: '',
+    totalAmount: '',
+  });
 
   const bookings = [
     {
@@ -114,7 +125,13 @@ const Bookings: React.FC = () => {
           <h1 className="text-3xl font-bold text-gray-900">Bookings</h1>
           <p className="mt-2 text-gray-600">Manage venue bookings and reservations</p>
         </div>
-        <button className="mt-4 sm:mt-0 btn-primary flex items-center">
+        <button 
+          onClick={() => {
+            setFormData({ client: '', venue: '', event: '', date: '', startTime: '', endTime: '', totalAmount: '' });
+            setShowAddModal(true);
+          }}
+          className="mt-4 sm:mt-0 btn-primary flex items-center"
+        >
           <FiPlus className="mr-2 h-5 w-5" />
           New Booking
         </button>
@@ -304,6 +321,108 @@ const Bookings: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Add/Edit Booking Modal */}
+      <Modal 
+        open={showAddModal} 
+        onClose={() => setShowAddModal(false)} 
+        title="New Booking"
+      >
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          console.log('Booking saved:', formData);
+          setShowAddModal(false);
+        }} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Client Name *</label>
+            <input
+              type="text"
+              required
+              value={formData.client}
+              onChange={(e) => setFormData({...formData, client: e.target.value})}
+              className="block w-full px-3 py-2 rounded-md border border-gray-300"
+              placeholder="Select or enter client name"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Venue *</label>
+            <input
+              type="text"
+              required
+              value={formData.venue}
+              onChange={(e) => setFormData({...formData, venue: e.target.value})}
+              className="block w-full px-3 py-2 rounded-md border border-gray-300"
+              placeholder="Select or enter venue"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Event Type *</label>
+            <input
+              type="text"
+              required
+              value={formData.event}
+              onChange={(e) => setFormData({...formData, event: e.target.value})}
+              className="block w-full px-3 py-2 rounded-md border border-gray-300"
+              placeholder="Wedding, Corporate Event, etc."
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Date *</label>
+            <input
+              type="date"
+              required
+              value={formData.date}
+              onChange={(e) => setFormData({...formData, date: e.target.value})}
+              className="block w-full px-3 py-2 rounded-md border border-gray-300"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Start Time *</label>
+              <input
+                type="time"
+                required
+                value={formData.startTime}
+                onChange={(e) => setFormData({...formData, startTime: e.target.value})}
+                className="block w-full px-3 py-2 rounded-md border border-gray-300"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">End Time *</label>
+              <input
+                type="time"
+                required
+                value={formData.endTime}
+                onChange={(e) => setFormData({...formData, endTime: e.target.value})}
+                className="block w-full px-3 py-2 rounded-md border border-gray-300"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Total Amount ($) *</label>
+            <input
+              type="number"
+              required
+              value={formData.totalAmount}
+              onChange={(e) => setFormData({...formData, totalAmount: e.target.value})}
+              className="block w-full px-3 py-2 rounded-md border border-gray-300"
+              placeholder="5000"
+            />
+          </div>
+          <div className="flex justify-end space-x-3 pt-4">
+            <button
+              type="button"
+              onClick={() => setShowAddModal(false)}
+              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button type="submit" className="btn-primary">
+              Create Booking
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 };
