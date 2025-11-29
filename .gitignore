@@ -1,0 +1,13 @@
+.vs/
+# Visual Studio build outputs
+bin/
+obj/
+
+# Node modules (frontend)
+eventra_app/node_modules/
+
+# Vite / build outputs
+dist/
+
+# Environment files
+.env
