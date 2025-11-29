@@ -1,8 +1,17 @@
 import React, { useState } from 'react';
 import { FiPlus, FiSearch, FiMail, FiPhone, FiEdit, FiTrash2, FiEye, FiMapPin } from 'react-icons/fi';
+import Modal from '../components/Modal';
 
 const Clients: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    company: '',
+    address: '',
+  });
 
   const clients = [
     {
@@ -88,7 +97,13 @@ const Clients: React.FC = () => {
           <h1 className="text-3xl font-bold text-gray-900">Clients</h1>
           <p className="mt-2 text-gray-600">Manage your client relationships and contacts</p>
         </div>
-        <button className="mt-4 sm:mt-0 btn-primary flex items-center">
+        <button 
+          onClick={() => {
+            setFormData({ name: '', email: '', phone: '', company: '', address: '' });
+            setShowAddModal(true);
+          }}
+          className="mt-4 sm:mt-0 btn-primary flex items-center"
+        >
           <FiPlus className="mr-2 h-5 w-5" />
           Add Client
         </button>
@@ -229,6 +244,85 @@ const Clients: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Add/Edit Client Modal */}
+      <Modal 
+        open={showAddModal} 
+        onClose={() => setShowAddModal(false)} 
+        title="Add New Client"
+      >
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          console.log('Client saved:', formData);
+          setShowAddModal(false);
+        }} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
+            <input
+              type="text"
+              required
+              value={formData.name}
+              onChange={(e) => setFormData({...formData, name: e.target.value})}
+              className="block w-full px-3 py-2 rounded-md border border-gray-300"
+              placeholder="John Doe"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Email *</label>
+            <input
+              type="email"
+              required
+              value={formData.email}
+              onChange={(e) => setFormData({...formData, email: e.target.value})}
+              className="block w-full px-3 py-2 rounded-md border border-gray-300"
+              placeholder="john@example.com"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Phone *</label>
+            <input
+              type="tel"
+              required
+              value={formData.phone}
+              onChange={(e) => setFormData({...formData, phone: e.target.value})}
+              className="block w-full px-3 py-2 rounded-md border border-gray-300"
+              placeholder="+1 (555) 000-0000"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Company</label>
+            <input
+              type="text"
+              value={formData.company}
+              onChange={(e) => setFormData({...formData, company: e.target.value})}
+              className="block w-full px-3 py-2 rounded-md border border-gray-300"
+              placeholder="Acme Corp"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Address</label>
+            <textarea
+              rows={3}
+              value={formData.address}
+              onChange={(e) => setFormData({...formData, address: e.target.value})}
+              className="block w-full px-3 py-2 rounded-md border border-gray-300"
+              placeholder="123 Main St, City, State 12345"
+            />
+          </div>
+          <div className="flex justify-end space-x-3 pt-4">
+            <button
+              type="button"
+              onClick={() => setShowAddModal(false)}
+              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button type="submit" className="btn-primary">
+              Add Client
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 };
