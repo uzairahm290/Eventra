@@ -3,12 +3,12 @@
   "WorkspaceRootPath": "C:\\Users\\Muhammad Sanaan\\Desktop\\Eventra\\eventra_api\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{E538DF9B-9DCD-4B9C-B59A-8D273C62788A}|eventra_api.csproj|c:\\users\\muhammad sanaan\\desktop\\eventra\\eventra_api\\models\\applicationuser.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{E538DF9B-9DCD-4B9C-B59A-8D273C62788A}|eventra_api.csproj|solutionrelative:models\\applicationuser.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{E538DF9B-9DCD-4B9C-B59A-8D273C62788A}|eventra_api.csproj|c:\\users\\muhammad sanaan\\desktop\\eventra\\eventra_api\\controllers\\authcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{E538DF9B-9DCD-4B9C-B59A-8D273C62788A}|eventra_api.csproj|solutionrelative:controllers\\authcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E538DF9B-9DCD-4B9C-B59A-8D273C62788A}|eventra_api.csproj|c:\\users\\muhammad sanaan\\desktop\\eventra\\eventra_api\\models\\applicationuser.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{E538DF9B-9DCD-4B9C-B59A-8D273C62788A}|eventra_api.csproj|solutionrelative:models\\applicationuser.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{E538DF9B-9DCD-4B9C-B59A-8D273C62788A}|eventra_api.csproj|c:\\users\\muhammad sanaan\\desktop\\eventra\\eventra_api\\migrations\\20251129062733_initialsetup.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -50,7 +50,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 1,
+          "SelectedChildIndex": 3,
           "Children": [
             {
               "$type": "Document",
@@ -67,13 +67,13 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 1,
               "Title": "ApplicationUser.cs",
               "DocumentMoniker": "C:\\Users\\Muhammad Sanaan\\Desktop\\Eventra\\eventra_api\\Models\\ApplicationUser.cs",
               "RelativeDocumentMoniker": "Models\\ApplicationUser.cs",
               "ToolTip": "C:\\Users\\Muhammad Sanaan\\Desktop\\Eventra\\eventra_api\\Models\\ApplicationUser.cs",
               "RelativeToolTip": "Models\\ApplicationUser.cs",
-              "ViewState": "AgIAAAUAAAAAAAAAAAAxwAoAAAAwAAAAAAAAAA==",
+              "ViewState": "AgIAAAMAAAAAAAAAAAAAAAwAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-11-29T05:43:59.521Z",
               "EditorCaption": ""
@@ -93,13 +93,13 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 0,
               "Title": "AuthController.cs",
               "DocumentMoniker": "C:\\Users\\Muhammad Sanaan\\Desktop\\Eventra\\eventra_api\\Controllers\\AuthController.cs",
               "RelativeDocumentMoniker": "Controllers\\AuthController.cs",
               "ToolTip": "C:\\Users\\Muhammad Sanaan\\Desktop\\Eventra\\eventra_api\\Controllers\\AuthController.cs",
               "RelativeToolTip": "Controllers\\AuthController.cs",
-              "ViewState": "AgIAACAAAAAAAAAAAAAwwCsAAAATAAAAAAAAAA==",
+              "ViewState": "AgIAAAMAAAAAAAAAAAAAACwAAAAtAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-11-29T05:40:26.078Z",
               "EditorCaption": ""
@@ -151,7 +151,7 @@
               "RelativeDocumentMoniker": "appsettings.json",
               "ToolTip": "C:\\Users\\Muhammad Sanaan\\Desktop\\Eventra\\eventra_api\\appsettings.json",
               "RelativeToolTip": "appsettings.json",
-              "ViewState": "AgIAAAIAAAAAAAAAAAAwwBEAAAABAAAAAAAAAA==",
+              "ViewState": "AgIAAAIAAAAAAAAAAAAwwBAAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
               "WhenOpened": "2025-11-29T05:45:40.471Z",
               "EditorCaption": ""
