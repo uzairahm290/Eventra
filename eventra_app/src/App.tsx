@@ -10,6 +10,7 @@ import Dashboard from './pages/Dashboard';
 import Events from './pages/Events';
 import Venues from './pages/Venues';
 import Clients from './pages/Clients';
+import Menus from './pages/Menus';
 import Bookings from './pages/Bookings';
 import Profile from './pages/Profile';
 import Settings from './pages/Settings';
@@ -76,6 +77,7 @@ function AppRoutes() {
         <Route path="events/create" element={<CreateEvent />} />
         <Route path="venues" element={<Venues />} />
         <Route path="clients" element={<Clients />} />
+        <Route path="menus" element={<Menus />} />
         <Route path="bookings" element={<Bookings />} />
         <Route path="calendar" element={<Calendar />} />
         <Route path="reports" element={<Reports />} />
