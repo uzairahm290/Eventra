@@ -3,16 +3,28 @@
   "WorkspaceRootPath": "C:\\Users\\Muhammad Sanaan\\Desktop\\Eventra\\eventra_api\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{E538DF9B-9DCD-4B9C-B59A-8D273C62788A}|eventra_api.csproj|c:\\users\\muhammad sanaan\\desktop\\eventra\\eventra_api\\controllers\\authcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{E538DF9B-9DCD-4B9C-B59A-8D273C62788A}|eventra_api.csproj|solutionrelative:controllers\\authcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{E538DF9B-9DCD-4B9C-B59A-8D273C62788A}|eventra_api.csproj|c:\\users\\muhammad sanaan\\desktop\\eventra\\eventra_api\\migrations\\20251129062733_initialsetup.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{E538DF9B-9DCD-4B9C-B59A-8D273C62788A}|eventra_api.csproj|solutionrelative:migrations\\20251129062733_initialsetup.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E538DF9B-9DCD-4B9C-B59A-8D273C62788A}|eventra_api.csproj|c:\\users\\muhammad sanaan\\desktop\\eventra\\eventra_api\\migrations\\20251129082204_userprofile.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{E538DF9B-9DCD-4B9C-B59A-8D273C62788A}|eventra_api.csproj|solutionrelative:migrations\\20251129082204_userprofile.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{E538DF9B-9DCD-4B9C-B59A-8D273C62788A}|eventra_api.csproj|c:\\users\\muhammad sanaan\\desktop\\eventra\\eventra_api\\models\\applicationuser.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{E538DF9B-9DCD-4B9C-B59A-8D273C62788A}|eventra_api.csproj|solutionrelative:models\\applicationuser.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{E538DF9B-9DCD-4B9C-B59A-8D273C62788A}|eventra_api.csproj|c:\\users\\muhammad sanaan\\desktop\\eventra\\eventra_api\\migrations\\20251129062733_initialsetup.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{E538DF9B-9DCD-4B9C-B59A-8D273C62788A}|eventra_api.csproj|solutionrelative:migrations\\20251129062733_initialsetup.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{E538DF9B-9DCD-4B9C-B59A-8D273C62788A}|eventra_api.csproj|c:\\users\\muhammad sanaan\\desktop\\eventra\\eventra_api\\models\\registrationdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{E538DF9B-9DCD-4B9C-B59A-8D273C62788A}|eventra_api.csproj|solutionrelative:models\\registrationdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E538DF9B-9DCD-4B9C-B59A-8D273C62788A}|eventra_api.csproj|c:\\users\\muhammad sanaan\\desktop\\eventra\\eventra_api\\models\\userprofiledto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{E538DF9B-9DCD-4B9C-B59A-8D273C62788A}|eventra_api.csproj|solutionrelative:models\\userprofiledto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E538DF9B-9DCD-4B9C-B59A-8D273C62788A}|eventra_api.csproj|c:\\users\\muhammad sanaan\\desktop\\eventra\\eventra_api\\models\\logindto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{E538DF9B-9DCD-4B9C-B59A-8D273C62788A}|eventra_api.csproj|solutionrelative:models\\logindto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{E538DF9B-9DCD-4B9C-B59A-8D273C62788A}|eventra_api.csproj|c:\\users\\muhammad sanaan\\desktop\\eventra\\eventra_api\\models\\event.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -21,6 +33,14 @@
     {
       "AbsoluteMoniker": "D:0:0:{E538DF9B-9DCD-4B9C-B59A-8D273C62788A}|eventra_api.csproj|c:\\users\\muhammad sanaan\\desktop\\eventra\\eventra_api\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{E538DF9B-9DCD-4B9C-B59A-8D273C62788A}|eventra_api.csproj|solutionrelative:program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E538DF9B-9DCD-4B9C-B59A-8D273C62788A}|eventra_api.csproj|c:\\users\\muhammad sanaan\\desktop\\eventra\\eventra_api\\controllers\\profilecontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{E538DF9B-9DCD-4B9C-B59A-8D273C62788A}|eventra_api.csproj|solutionrelative:controllers\\profilecontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E538DF9B-9DCD-4B9C-B59A-8D273C62788A}|eventra_api.csproj|c:\\users\\muhammad sanaan\\desktop\\eventra\\eventra_api\\controllers\\authcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{E538DF9B-9DCD-4B9C-B59A-8D273C62788A}|eventra_api.csproj|solutionrelative:controllers\\authcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{E538DF9B-9DCD-4B9C-B59A-8D273C62788A}|eventra_api.csproj|c:\\users\\muhammad sanaan\\desktop\\eventra\\eventra_api\\data\\appdbcontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -54,72 +74,137 @@
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 2,
-              "Title": "20251129062733_InitialSetup.cs",
-              "DocumentMoniker": "C:\\Users\\Muhammad Sanaan\\Desktop\\Eventra\\eventra_api\\Migrations\\20251129062733_InitialSetup.cs",
-              "RelativeDocumentMoniker": "Migrations\\20251129062733_InitialSetup.cs",
-              "ToolTip": "C:\\Users\\Muhammad Sanaan\\Desktop\\Eventra\\eventra_api\\Migrations\\20251129062733_InitialSetup.cs",
-              "RelativeToolTip": "Migrations\\20251129062733_InitialSetup.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "DocumentIndex": 1,
+              "Title": "20251129082204_UserProfile.cs",
+              "DocumentMoniker": "C:\\Users\\Muhammad Sanaan\\Desktop\\Eventra\\eventra_api\\Migrations\\20251129082204_UserProfile.cs",
+              "RelativeDocumentMoniker": "Migrations\\20251129082204_UserProfile.cs",
+              "ToolTip": "C:\\Users\\Muhammad Sanaan\\Desktop\\Eventra\\eventra_api\\Migrations\\20251129082204_UserProfile.cs",
+              "RelativeToolTip": "Migrations\\20251129082204_UserProfile.cs",
+              "ViewState": "AgIAABMAAAAAAAAAAAAQwAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-29T06:27:34.157Z",
+              "WhenOpened": "2025-11-29T08:22:04.459Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 3,
+              "Title": "RegistrationDTO.cs",
+              "DocumentMoniker": "C:\\Users\\Muhammad Sanaan\\Desktop\\Eventra\\eventra_api\\Models\\RegistrationDTO.cs",
+              "RelativeDocumentMoniker": "Models\\RegistrationDTO.cs",
+              "ToolTip": "C:\\Users\\Muhammad Sanaan\\Desktop\\Eventra\\eventra_api\\Models\\RegistrationDTO.cs",
+              "RelativeToolTip": "Models\\RegistrationDTO.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABMAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-29T08:18:44.761Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
               "Title": "ApplicationUser.cs",
               "DocumentMoniker": "C:\\Users\\Muhammad Sanaan\\Desktop\\Eventra\\eventra_api\\Models\\ApplicationUser.cs",
               "RelativeDocumentMoniker": "Models\\ApplicationUser.cs",
               "ToolTip": "C:\\Users\\Muhammad Sanaan\\Desktop\\Eventra\\eventra_api\\Models\\ApplicationUser.cs",
               "RelativeToolTip": "Models\\ApplicationUser.cs",
-              "ViewState": "AgIAAAMAAAAAAAAAAAAAAAwAAAABAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAoAAAAbAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-11-29T05:43:59.521Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 0,
+              "Title": "20251129062733_InitialSetup.cs",
+              "DocumentMoniker": "C:\\Users\\Muhammad Sanaan\\Desktop\\Eventra\\eventra_api\\Migrations\\20251129062733_InitialSetup.cs",
+              "RelativeDocumentMoniker": "Migrations\\20251129062733_InitialSetup.cs",
+              "ToolTip": "C:\\Users\\Muhammad Sanaan\\Desktop\\Eventra\\eventra_api\\Migrations\\20251129062733_InitialSetup.cs",
+              "RelativeToolTip": "Migrations\\20251129062733_InitialSetup.cs",
+              "ViewState": "AgIAAEMAAAAAAAAAAAAQwCYAAAAPAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-29T06:27:34.157Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "UserProfileDTO.cs",
+              "DocumentMoniker": "C:\\Users\\Muhammad Sanaan\\Desktop\\Eventra\\eventra_api\\Models\\UserProfileDTO.cs",
+              "RelativeDocumentMoniker": "Models\\UserProfileDTO.cs",
+              "ToolTip": "C:\\Users\\Muhammad Sanaan\\Desktop\\Eventra\\eventra_api\\Models\\UserProfileDTO.cs",
+              "RelativeToolTip": "Models\\UserProfileDTO.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA4AAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-29T08:19:14.205Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "LoginDTO.cs",
+              "DocumentMoniker": "C:\\Users\\Muhammad Sanaan\\Desktop\\Eventra\\eventra_api\\Models\\LoginDTO.cs",
+              "RelativeDocumentMoniker": "Models\\LoginDTO.cs",
+              "ToolTip": "C:\\Users\\Muhammad Sanaan\\Desktop\\Eventra\\eventra_api\\Models\\LoginDTO.cs",
+              "RelativeToolTip": "Models\\LoginDTO.cs",
+              "ViewState": "AgIAAAIAAAAAAAAAAAAkwAoAAAAlAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-29T08:18:28.148Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
               "Title": "Event.cs",
               "DocumentMoniker": "C:\\Users\\Muhammad Sanaan\\Desktop\\Eventra\\eventra_api\\Models\\Event.cs",
               "RelativeDocumentMoniker": "Models\\Event.cs",
               "ToolTip": "C:\\Users\\Muhammad Sanaan\\Desktop\\Eventra\\eventra_api\\Models\\Event.cs",
               "RelativeToolTip": "Models\\Event.cs",
-              "ViewState": "AgIAAAcAAAAAAAAAAAAzwBIAAAABAAAAAAAAAA==",
+              "ViewState": "AgIAAAMAAAAAAAAAAAAAABIAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-11-29T05:44:19.323Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
-              "Title": "AuthController.cs",
-              "DocumentMoniker": "C:\\Users\\Muhammad Sanaan\\Desktop\\Eventra\\eventra_api\\Controllers\\AuthController.cs",
-              "RelativeDocumentMoniker": "Controllers\\AuthController.cs",
-              "ToolTip": "C:\\Users\\Muhammad Sanaan\\Desktop\\Eventra\\eventra_api\\Controllers\\AuthController.cs",
-              "RelativeToolTip": "Controllers\\AuthController.cs",
-              "ViewState": "AgIAAAMAAAAAAAAAAAAAACwAAAAtAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-29T05:40:26.078Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 7,
               "Title": "Program.cs",
               "DocumentMoniker": "C:\\Users\\Muhammad Sanaan\\Desktop\\Eventra\\eventra_api\\Program.cs",
               "RelativeDocumentMoniker": "Program.cs",
               "ToolTip": "C:\\Users\\Muhammad Sanaan\\Desktop\\Eventra\\eventra_api\\Program.cs",
               "RelativeToolTip": "Program.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA8AAAAZAAAAAAAAAA==",
+              "ViewState": "AgIAAAwAAAAAAAAAAAAAAA8AAAAZAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-11-20T19:05:31.091Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 8,
+              "Title": "ProfileController.cs",
+              "DocumentMoniker": "C:\\Users\\Muhammad Sanaan\\Desktop\\Eventra\\eventra_api\\Controllers\\ProfileController.cs",
+              "RelativeDocumentMoniker": "Controllers\\ProfileController.cs",
+              "ToolTip": "C:\\Users\\Muhammad Sanaan\\Desktop\\Eventra\\eventra_api\\Controllers\\ProfileController.cs",
+              "RelativeToolTip": "Controllers\\ProfileController.cs",
+              "ViewState": "AgIAACcAAAAAAAAAAAAYwHsAAABAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-29T08:17:17.884Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 9,
+              "Title": "AuthController.cs",
+              "DocumentMoniker": "C:\\Users\\Muhammad Sanaan\\Desktop\\Eventra\\eventra_api\\Controllers\\AuthController.cs",
+              "RelativeDocumentMoniker": "Controllers\\AuthController.cs",
+              "ToolTip": "C:\\Users\\Muhammad Sanaan\\Desktop\\Eventra\\eventra_api\\Controllers\\AuthController.cs",
+              "RelativeToolTip": "Controllers\\AuthController.cs",
+              "ViewState": "AgIAADIAAAAAAAAAAAAQwDsAAAA0AAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-29T05:40:26.078Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 10,
               "Title": "AppDbContext.cs",
               "DocumentMoniker": "C:\\Users\\Muhammad Sanaan\\Desktop\\Eventra\\eventra_api\\Data\\AppDbContext.cs",
               "RelativeDocumentMoniker": "Data\\AppDbContext.cs",
@@ -132,7 +217,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 7,
+              "DocumentIndex": 12,
               "Title": "TokenService.cs",
               "DocumentMoniker": "C:\\Users\\Muhammad Sanaan\\Desktop\\Eventra\\eventra_api\\Services\\TokenService.cs",
               "RelativeDocumentMoniker": "Services\\TokenService.cs",
@@ -145,7 +230,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 8,
+              "DocumentIndex": 13,
               "Title": "appsettings.json",
               "DocumentMoniker": "C:\\Users\\Muhammad Sanaan\\Desktop\\Eventra\\eventra_api\\appsettings.json",
               "RelativeDocumentMoniker": "appsettings.json",
@@ -158,7 +243,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 6,
+              "DocumentIndex": 11,
               "Title": "eventra_api",
               "DocumentMoniker": "C:\\Users\\Muhammad Sanaan\\Desktop\\Eventra\\eventra_api\\eventra_api.csproj",
               "RelativeDocumentMoniker": "eventra_api.csproj",
@@ -171,7 +256,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 9,
+              "DocumentIndex": 14,
               "Title": "EventController.cs",
               "DocumentMoniker": "C:\\Users\\Muhammad Sanaan\\Desktop\\Eventra\\eventra_api\\Controllers\\EventController.cs",
               "RelativeDocumentMoniker": "Controllers\\EventController.cs",

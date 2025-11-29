@@ -1,8 +1,11 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Identity;
 using eventra_api.Models;
-using eventra_api.Services; // <-- NEW: Required for TokenService
+using eventra_api.Services; // Required for TokenService
 using System.Threading.Tasks;
+using System.Linq;
+using System.ComponentModel.DataAnnotations; // Required for DTOs
+using System.Collections.Generic;
 
 namespace eventra_api.Controllers
 {
@@ -12,44 +15,55 @@ namespace eventra_api.Controllers
     {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
-        private readonly TokenService _tokenService; // <-- NEW: Declare the TokenService
+        private readonly TokenService _tokenService;
 
         // Dependency Injection: Gets the necessary Identity and Token services
         public AuthController(
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            TokenService tokenService) // <-- NEW: Inject TokenService
+            TokenService tokenService)
         {
             _userManager = userManager;
             _signInManager = signInManager;
-            _tokenService = tokenService; // <-- Assign the injected service
+            _tokenService = tokenService;
         }
 
         // ------------------------------------------------------------------
         // REGISTRATION / SIGNUP (POST /api/Auth/Register)
         // ------------------------------------------------------------------
         [HttpPost("Register")]
-        public async Task<IActionResult> Register([FromBody] RegisterRequestDto model)
+        // Uses the new RegisterDTO
+        public async Task<IActionResult> Register([FromBody] RegisterDTO model)
         {
-            if (await _userManager.FindByEmailAsync(model.Email) != null)
+            // Check if user exists by Email or Username
+            if (await _userManager.FindByEmailAsync(model.UserMail) != null)
             {
                 return BadRequest(new { message = "User with this email already exists." });
             }
+            if (await _userManager.FindByNameAsync(model.UserName) != null)
+            {
+                return BadRequest(new { message = "User with this username already exists." });
+            }
 
+            // NOTE: Assuming ApplicationUser has a property called 'LastName'
             var user = new ApplicationUser
             {
-                Email = model.Email,
-                UserName = model.Email,
+                // Map UserMail to the Identity system's Email field
+                Email = model.UserMail,
+                // Map UserName to the Identity system's UserName field
+                UserName = model.UserName,
+
                 FirstName = model.FirstName,
-                SecondName = model.LastName,
-                DateRegistered = DateTime.Now
+                // Map SecondName from DTO to LastName in ApplicationUser model
+                SecondName = model.SecondName,
+
+                DateRegistered = System.DateTime.Now
             };
 
             var result = await _userManager.CreateAsync(user, model.Password);
 
             if (result.Succeeded)
             {
-                // After successful registration, generate and return the JWT token
                 var token = _tokenService.CreateToken(user);
 
                 return Ok(new
@@ -61,8 +75,10 @@ namespace eventra_api.Controllers
                         id = user.Id,
                         email = user.Email,
                         firstName = user.FirstName,
+                        // Use the actual ApplicationUser property name (LastName)
                         lastName = user.SecondName,
-                        dateRegistered = user.DateRegistered
+                        dateRegistered = user.DateRegistered,
+                        profileImageBase64 = user.ProfileImageBase64
                     }
                 });
             }
@@ -74,20 +90,35 @@ namespace eventra_api.Controllers
         // LOGIN (POST /api/Auth/Login) - NOW RETURNS JWT TOKEN
         // ------------------------------------------------------------------
         [HttpPost("Login")]
-        public async Task<IActionResult> Login([FromBody] LoginRequestDto model)
+        // Uses the new LoginDto
+        public async Task<IActionResult> Login([FromBody] LoginDto model)
         {
-            var user = await _userManager.FindByEmailAsync(model.Email);
+            ApplicationUser user = null;
+
+            // 1. Determine login identifier (UserMail or UserName)
+            if (!string.IsNullOrEmpty(model.UserMail))
+            {
+                user = await _userManager.FindByEmailAsync(model.UserMail);
+            }
+            else if (!string.IsNullOrEmpty(model.UserName))
+            {
+                user = await _userManager.FindByNameAsync(model.UserName);
+            }
+            else
+            {
+                return BadRequest(new { message = "Must provide either UserName or UserMail." });
+            }
 
             if (user == null)
             {
-                return Unauthorized("Invalid credentials."); // HTTP 401
+                return Unauthorized(new { message = "Invalid credentials." }); // HTTP 401
             }
 
+            // 2. Check password against the user found by identifier
             var result = await _signInManager.CheckPasswordSignInAsync(user, model.Password, false);
 
             if (result.Succeeded)
             {
-                // CHANGE: Instead of a simple message, generate and return the JWT token
                 var token = _tokenService.CreateToken(user);
 
                 return Ok(new
@@ -99,13 +130,15 @@ namespace eventra_api.Controllers
                         id = user.Id,
                         email = user.Email,
                         firstName = user.FirstName,
+                        // Use the actual ApplicationUser property name (LastName)
                         lastName = user.SecondName,
-                        dateRegistered = user.DateRegistered
+                        dateRegistered = user.DateRegistered,
+                        profileImageBase64 = user.ProfileImageBase64
                     }
                 });
             }
 
-            return Unauthorized("Invalid credentials."); // HTTP 401
+            return Unauthorized(new { message = "Invalid credentials." }); // HTTP 401
         }
 
         // ------------------------------------------------------------------
@@ -126,6 +159,7 @@ namespace eventra_api.Controllers
                 id = u.Id,
                 email = u.Email,
                 firstName = u.FirstName,
+                // Use the actual ApplicationUser property name (LastName)
                 lastName = u.SecondName,
                 dateRegistered = u.DateRegistered,
                 userName = u.UserName
@@ -135,18 +169,34 @@ namespace eventra_api.Controllers
         }
     }
 
-    // DTOs (Data Transfer Objects)
-    public class RegisterRequestDto
+    // =================================================================
+    // DTOs (Data Transfer Objects) - Now integrated into the same file
+    // =================================================================
+
+    public class RegisterDTO
     {
+        [Required]
         public string FirstName { get; set; } = string.Empty;
-        public string LastName { get; set; } = string.Empty;
-        public string Email { get; set; } = string.Empty;
+        [Required]
+        public string SecondName { get; set; } = string.Empty;
+        [Required]
+        public string UserName { get; set; } = string.Empty;
+        [Required]
+        [EmailAddress]
+        public string UserMail { get; set; } = string.Empty;
+        [Required]
+        [DataType(DataType.Password)]
         public string Password { get; set; } = string.Empty;
     }
 
-    public class LoginRequestDto
+    public class LoginDto
     {
-        public string Email { get; set; } = string.Empty;
+        // One of these should be supplied, but both are nullable
+        public string? UserName { get; set; }
+        public string? UserMail { get; set; }
+
+        [Required]
+        [DataType(DataType.Password)]
         public string Password { get; set; } = string.Empty;
     }
 }

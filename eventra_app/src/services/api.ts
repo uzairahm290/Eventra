@@ -21,7 +21,16 @@ export interface AuthResponse {
     firstName: string;
     lastName: string;
     dateRegistered: string;
+    profileImageBase64?: string;
   };
+}
+
+export interface ProfileResponse {
+  firstName?: string;
+  secondName?: string;
+  userName?: string;
+  userMail?: string;
+  profileImageBase64?: string;
 }
 
 class ApiService {
@@ -44,12 +53,18 @@ class ApiService {
   }
 
   async login(credentials: LoginRequest): Promise<AuthResponse> {
+    // Convert frontend field names to backend field names
+    const backendLoginRequest = {
+      userMail: credentials.email,
+      password: credentials.password
+    };
+
     const response = await fetch(`${API_BASE_URL}/Auth/Login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(credentials),
+      body: JSON.stringify(backendLoginRequest),
     });
 
     if (!response.ok) {
@@ -63,12 +78,21 @@ class ApiService {
   }
 
   async register(userData: RegisterRequest): Promise<AuthResponse> {
+    // Convert frontend field names to backend field names
+    const backendRegisterRequest = {
+      firstName: userData.firstName,
+      secondName: userData.lastName,
+      userName: userData.email.split('@')[0], // Use email prefix as username
+      userMail: userData.email,
+      password: userData.password
+    };
+
     const response = await fetch(`${API_BASE_URL}/Auth/Register`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(userData),
+      body: JSON.stringify(backendRegisterRequest),
     });
 
     if (!response.ok) {
