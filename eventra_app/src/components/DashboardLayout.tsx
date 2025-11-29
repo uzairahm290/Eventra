@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import {
   FiHome, FiCalendar, FiMapPin, FiUsers, FiBookOpen,
   FiMenu, FiX, FiBell, FiUser, FiLogOut, FiSettings,
-  FiSearch, FiBarChart2, FiHelpCircle
+  FiSearch, FiBarChart2, FiHelpCircle, FiCoffee
 } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
 // Theme toggle removed to restore light-only theme
@@ -21,6 +21,7 @@ const DashboardLayout: React.FC = () => {
     { name: 'Events', href: '/dashboard/events', icon: FiCalendar },
     { name: 'Venues', href: '/dashboard/venues', icon: FiMapPin },
     { name: 'Clients', href: '/dashboard/clients', icon: FiUsers },
+    { name: 'Menus', href: '/dashboard/menus', icon: FiCoffee },
     { name: 'Bookings', href: '/dashboard/bookings', icon: FiBookOpen },
     { name: 'Calendar', href: '/dashboard/calendar', icon: FiCalendar },
     { name: 'Reports', href: '/dashboard/reports', icon: FiBarChart2 },
