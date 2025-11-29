@@ -33,7 +33,7 @@ namespace eventra_api.Controllers
         {
             if (await _userManager.FindByEmailAsync(model.Email) != null)
             {
-                return BadRequest("User with this email already exists.");
+                return BadRequest(new { message = "User with this email already exists." });
             }
 
             var user = new ApplicationUser
@@ -49,10 +49,25 @@ namespace eventra_api.Controllers
 
             if (result.Succeeded)
             {
-                return Ok("User registered successfully. Please log in.");
+                // After successful registration, generate and return the JWT token
+                var token = _tokenService.CreateToken(user);
+
+                return Ok(new
+                {
+                    message = "User registered successfully!",
+                    token = token,
+                    user = new
+                    {
+                        id = user.Id,
+                        email = user.Email,
+                        firstName = user.FirstName,
+                        lastName = user.SecondName,
+                        dateRegistered = user.DateRegistered
+                    }
+                });
             }
 
-            return BadRequest(result.Errors);
+            return BadRequest(new { message = "Registration failed.", errors = result.Errors });
         }
 
         // ------------------------------------------------------------------
@@ -77,13 +92,46 @@ namespace eventra_api.Controllers
 
                 return Ok(new
                 {
-                    Message = "Login successful!",
-                    Token = token, // <-- JWT Token
-                    UserId = user.Id
+                    message = "Login successful!",
+                    token = token, // <-- JWT Token
+                    user = new
+                    {
+                        id = user.Id,
+                        email = user.Email,
+                        firstName = user.FirstName,
+                        lastName = user.SecondName,
+                        dateRegistered = user.DateRegistered
+                    }
                 });
             }
 
             return Unauthorized("Invalid credentials."); // HTTP 401
+        }
+
+        // ------------------------------------------------------------------
+        // GET ALL USERS (GET /api/Auth/Users)
+        // ------------------------------------------------------------------
+        [HttpGet("Users")]
+        public IActionResult GetAllUsers()
+        {
+            var users = _userManager.Users.ToList();
+
+            if (users.Count == 0)
+            {
+                return Ok(new { message = "No users found.", users = new List<object>() });
+            }
+
+            var userList = users.Select(u => new
+            {
+                id = u.Id,
+                email = u.Email,
+                firstName = u.FirstName,
+                lastName = u.SecondName,
+                dateRegistered = u.DateRegistered,
+                userName = u.UserName
+            }).ToList();
+
+            return Ok(new { message = "Users retrieved successfully!", users = userList });
         }
     }
 
