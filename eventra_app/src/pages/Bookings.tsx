@@ -6,6 +6,9 @@ const Bookings: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editingBooking, setEditingBooking] = useState<any>(null);
+  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [viewId, setViewId] = useState<number | null>(null);
   const [formData, setFormData] = useState({
     client: '',
     venue: '',
@@ -16,7 +19,7 @@ const Bookings: React.FC = () => {
     totalAmount: '',
   });
 
-  const bookings = [
+  const [bookingsList, setBookingsList] = useState([
     {
       id: 1,
       bookingId: 'BK-2025-001',
@@ -87,7 +90,30 @@ const Bookings: React.FC = () => {
       status: 'Confirmed',
       paymentStatus: 'Paid',
     },
-  ];
+  ]);
+
+  const handleDelete = () => {
+    if (deleteId) {
+      setBookingsList(prev => prev.filter(b => b.id !== deleteId));
+      setDeleteId(null);
+    }
+  };
+
+  const handleEdit = (booking: any) => {
+    setEditingBooking(booking);
+    setFormData({
+      client: booking.client,
+      venue: booking.venue,
+      event: booking.event,
+      date: booking.date,
+      startTime: booking.time.split(' - ')[0],
+      endTime: booking.time.split(' - ')[1],
+      totalAmount: booking.totalAmount.replace('$', '').replace(',', ''),
+    });
+    setShowAddModal(true);
+  };
+
+  const bookings = bookingsList;
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -263,13 +289,13 @@ const Bookings: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex items-center justify-end space-x-2">
-                      <button className="text-blue-600 hover:text-blue-800 p-2 rounded-lg hover:bg-blue-50">
+                      <button onClick={() => setViewId(booking.id)} className="text-blue-600 hover:text-blue-800 p-2 rounded-lg hover:bg-blue-50">
                         <FiEye className="h-4 w-4" />
                       </button>
-                      <button className="text-green-600 hover:text-green-800 p-2 rounded-lg hover:bg-green-50">
+                      <button onClick={() => handleEdit(booking)} className="text-green-600 hover:text-green-800 p-2 rounded-lg hover:bg-green-50">
                         <FiEdit className="h-4 w-4" />
                       </button>
-                      <button className="text-red-600 hover:text-red-800 p-2 rounded-lg hover:bg-red-50">
+                      <button onClick={() => setDeleteId(booking.id)} className="text-red-600 hover:text-red-800 p-2 rounded-lg hover:bg-red-50">
                         <FiTrash2 className="h-4 w-4" />
                       </button>
                     </div>
@@ -326,7 +352,7 @@ const Bookings: React.FC = () => {
       <Modal 
         open={showAddModal} 
         onClose={() => setShowAddModal(false)} 
-        title="New Booking"
+        title={editingBooking ? 'Edit Booking' : 'New Booking'}
       >
         <form onSubmit={(e) => {
           e.preventDefault();
@@ -418,10 +444,107 @@ const Bookings: React.FC = () => {
               Cancel
             </button>
             <button type="submit" className="btn-primary">
-              Create Booking
+              {editingBooking ? 'Update Booking' : 'Create Booking'}
             </button>
           </div>
         </form>
+      </Modal>
+
+      {/* View Modal */}
+      <Modal
+        open={viewId !== null}
+        onClose={() => setViewId(null)}
+        title="Booking Details"
+        maxWidthClass="max-w-2xl"
+      >
+        {viewId && bookingsList.find(b => b.id === viewId) && (() => {
+          const booking = bookingsList.find(b => b.id === viewId)!;
+          return (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">Booking ID</label>
+                  <p className="text-base font-semibold text-gray-900">{booking.bookingId}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">Status</label>
+                  <span className={`inline-block text-sm px-3 py-1 rounded-full font-semibold ${getStatusColor(booking.status)}`}>
+                    {booking.status}
+                  </span>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">Client</label>
+                  <p className="text-base text-gray-900">{booking.client}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">Venue</label>
+                  <p className="text-base text-gray-900">{booking.venue}</p>
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-500 mb-1">Event</label>
+                  <p className="text-base text-gray-900">{booking.event}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">Date</label>
+                  <p className="text-base text-gray-900">{booking.date}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">Time</label>
+                  <p className="text-base text-gray-900">{booking.time}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">Total Amount</label>
+                  <p className="text-lg font-bold text-gray-900">{booking.totalAmount}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">Deposit Paid</label>
+                  <p className="text-base text-green-600 font-semibold">{booking.depositPaid}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">Remaining</label>
+                  <p className="text-base text-red-600 font-semibold">{booking.remaining}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">Payment Status</label>
+                  <span className={`inline-block text-sm px-3 py-1 rounded-full font-semibold ${getPaymentStatusColor(booking.paymentStatus)}`}>
+                    {booking.paymentStatus}
+                  </span>
+                </div>
+              </div>
+              <div className="flex justify-end pt-4">
+                <button onClick={() => setViewId(null)} className="btn-primary">
+                  Close
+                </button>
+              </div>
+            </div>
+          );
+        })()}
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        open={deleteId !== null}
+        onClose={() => setDeleteId(null)}
+        title="Confirm Delete"
+        maxWidthClass="max-w-md"
+      >
+        <div className="space-y-4">
+          <p className="text-gray-700">Are you sure you want to delete this booking? This action cannot be undone.</p>
+          <div className="flex justify-end space-x-3 pt-2">
+            <button
+              onClick={() => setDeleteId(null)}
+              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleDelete}
+              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+            >
+              Delete
+            </button>
+          </div>
+        </div>
       </Modal>
     </div>
   );
