@@ -13,11 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("eventra_api")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-<<<<<<< Updated upstream
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+f309b59308a0c3b5907e149b3447aeaf52a13401")]
-=======
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+12267c81a4ef3895a32006e724f1585906bd7bcf")]
->>>>>>> Stashed changes
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+87f16f3381672bb65699704bafa32c471e52bae2")]
 [assembly: System.Reflection.AssemblyProductAttribute("eventra_api")]
 [assembly: System.Reflection.AssemblyTitleAttribute("eventra_api")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

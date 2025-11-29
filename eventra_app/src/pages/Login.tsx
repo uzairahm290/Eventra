@@ -5,11 +5,10 @@ import { useAuth } from '../context/AuthContext';
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, isLoading, error: contextError } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    username: '',
+    email: '',
     password: ''
   });
   const [error, setError] = useState('');
@@ -17,15 +16,17 @@ const Login: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setLoading(true);
+
+    if (!formData.email || !formData.password) {
+      setError('Please fill in all fields');
+      return;
+    }
 
     try {
-      await login(formData.username, formData.password);
+      await login(formData.email, formData.password);
       navigate('/dashboard');
     } catch (err) {
-      setError('Invalid credentials. Please try again.');
-    } finally {
-      setLoading(false);
+      setError(err instanceof Error ? err.message : 'Login failed. Please try again.');
     }
   };
 
@@ -35,6 +36,8 @@ const Login: React.FC = () => {
       [e.target.name]: e.target.value
     });
   };
+
+  const displayError = error || contextError;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-cyan-50 to-teal-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -57,30 +60,31 @@ const Login: React.FC = () => {
         {/* Login Form */}
         <div className="glass-effect rounded-2xl shadow-soft-xl p-8 border border-gray-100">
           <form className="space-y-6" onSubmit={handleSubmit}>
-            {error && (
+            {displayError && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-                {error}
+                {displayError}
               </div>
             )}
 
-            {/* Username Field */}
+            {/* Email Field */}
             <div>
-              <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
-                Username or Email
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                Email Address
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <FiMail className="h-5 w-5 text-gray-400" />
                 </div>
                 <input
-                  id="username"
-                  name="username"
-                  type="text"
+                  id="email"
+                  name="email"
+                  type="email"
                   required
-                  value={formData.username}
+                  value={formData.email}
                   onChange={handleChange}
-                  className="block w-full pl-10 pr-10 py-2 rounded-md border border-gray-300"
-                  placeholder="Enter your username"
+                  disabled={isLoading}
+                  className="block w-full pl-10 pr-10 py-2 rounded-md border border-gray-300 disabled:bg-gray-100"
+                  placeholder="Enter your email"
                 />
               </div>
             </div>
@@ -101,12 +105,13 @@ const Login: React.FC = () => {
                   required
                   value={formData.password}
                   onChange={handleChange}
+                  disabled={isLoading}
                   placeholder="Enter your password"
-                  className="block w-full pl-10 pr-10 py-2 rounded-md border border-gray-300"
-
+                  className="block w-full pl-10 pr-10 py-2 rounded-md border border-gray-300 disabled:bg-gray-100"
                 />
                 <button
                   type="button"
+                  disabled={isLoading}
                   className="absolute inset-y-0 right-0 pr-3 flex items-center"
                   onClick={() => setShowPassword(!showPassword)}
                 >
@@ -126,7 +131,8 @@ const Login: React.FC = () => {
                   id="remember-me"
                   name="remember-me"
                   type="checkbox"
-                  className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                  disabled={isLoading}
+                  className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded disabled:opacity-50"
                 />
                 <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">
                   Remember me
@@ -142,10 +148,10 @@ const Login: React.FC = () => {
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={loading}
+              disabled={isLoading}
               className="w-full btn-primary py-3 text-base font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? (
+              {isLoading ? (
                 <span className="flex items-center justify-center">
                   <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>

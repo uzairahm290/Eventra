@@ -20,8 +20,10 @@ namespace eventra_api.Services
             // 1. Define Claims (data about the user to embed in the token)
             var claims = new List<Claim>
             {
+                new Claim(ClaimTypes.NameIdentifier, user.Id), // User ID
                 new Claim(ClaimTypes.Email, user.Email!),
-                new Claim(ClaimTypes.GivenName, user.FirstName)
+                new Claim(ClaimTypes.GivenName, user.FirstName),
+                new Claim(ClaimTypes.Surname, user.SecondName)
             };
 
             // 2. Get Secret Key and Security Credential
