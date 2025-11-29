@@ -155,7 +155,7 @@ const Events: React.FC = () => {
               placeholder="Search events..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="input-field pl-10"
+              className="block w-full pl-10 pr-10 py-2 rounded-md border border-gray-300"
             />
           </div>
 
