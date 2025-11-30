@@ -15,18 +15,26 @@ const Bookings: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [bookingsList, setBookingsList] = useState<Booking[]>([]);
   const [formData, setFormData] = useState({
-    client: '',
-    venue: '',
-    event: '',
-    date: '',
-    startTime: '',
-    endTime: '',
-    totalAmount: '',
+    eventId: '',
+    numberOfTickets: '1',
+    specialRequests: '',
   });
+  const [events, setEvents] = useState<Array<{id: number, title: string, ticketPrice?: number}>>([]);
 
   useEffect(() => {
     loadBookings();
+    loadEvents();
   }, []);
+
+  const loadEvents = async () => {
+    try {
+      const { eventService } = await import('../services');
+      const data = await eventService.getAllEvents();
+      setEvents(data.map(e => ({ id: e.id, title: e.title, ticketPrice: e.ticketPrice })));
+    } catch (error) {
+      console.error('Failed to load events:', error);
+    }
+  };
 
   const loadBookings = async () => {
     try {
@@ -57,13 +65,9 @@ const Bookings: React.FC = () => {
 
   const handleEdit = (booking: Booking) => {
     const formDataObj = {
-      client: booking.userId,
-      venue: '',
-      event: String(booking.eventId ?? ''),
-      date: booking.bookingDate?.slice(0, 10) ?? '',
-      startTime: '',
-      endTime: '',
-      totalAmount: String(booking.totalAmount ?? 0),
+      eventId: String(booking.eventId ?? ''),
+      numberOfTickets: String(booking.numberOfTickets ?? 1),
+      specialRequests: booking.specialRequests ?? '',
     };
     setEditingBooking(formDataObj);
     setFormData(formDataObj);
@@ -113,7 +117,8 @@ const Bookings: React.FC = () => {
         </div>
         <button 
           onClick={() => {
-            setFormData({ client: '', venue: '', event: '', date: '', startTime: '', endTime: '', totalAmount: '' });
+            setEditingBooking(null);
+            setFormData({ eventId: '', numberOfTickets: '1', specialRequests: '' });
             setShowAddModal(true);
           }}
           className="mt-4 sm:mt-0 btn-primary flex items-center"
@@ -335,100 +340,103 @@ const Bookings: React.FC = () => {
       {/* Add/Edit Booking Modal */}
       <Modal 
         open={showAddModal} 
-        onClose={() => setShowAddModal(false)} 
+        onClose={() => {
+          setShowAddModal(false);
+          setEditingBooking(null);
+        }} 
         title={editingBooking ? 'Edit Booking' : 'New Booking'}
       >
-        <form onSubmit={(e) => {
+        <form onSubmit={async (e) => {
           e.preventDefault();
-          console.log('Booking saved:', formData);
-          setShowAddModal(false);
+          try {
+            const eventId = Number(formData.eventId);
+            const numberOfTickets = Number(formData.numberOfTickets);
+            
+            if (!eventId || numberOfTickets < 1) {
+              toast.error('Please select an event and enter valid number of tickets');
+              return;
+            }
+
+            await bookingService.createBooking({
+              eventId,
+              numberOfTickets,
+              specialRequests: formData.specialRequests || undefined
+            });
+            
+            toast.success('Booking created successfully!');
+            setShowAddModal(false);
+            setEditingBooking(null);
+            setFormData({ eventId: '', numberOfTickets: '1', specialRequests: '' });
+            await loadBookings();
+          } catch (error) {
+            console.error('Failed to save booking:', error);
+            toast.error(error instanceof Error ? error.message : 'Failed to create booking');
+          }
         }} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Client Name *</label>
-            <input
-              type="text"
+            <label className="block text-sm font-medium text-gray-700 mb-2">Event *</label>
+            <select
               required
-              value={formData.client}
-              onChange={(e) => setFormData({...formData, client: e.target.value})}
+              value={formData.eventId}
+              onChange={(e) => setFormData({...formData, eventId: e.target.value})}
               className="block w-full px-3 py-2 rounded-md border border-gray-300"
-              placeholder="Select or enter client name"
-            />
+            >
+              <option value="">Select an event</option>
+              {events.map(event => (
+                <option key={event.id} value={event.id}>
+                  {event.title} {event.ticketPrice ? `- $${event.ticketPrice}` : '(Free)'}
+                </option>
+              ))}
+            </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Venue *</label>
-            <input
-              type="text"
-              required
-              value={formData.venue}
-              onChange={(e) => setFormData({...formData, venue: e.target.value})}
-              className="block w-full px-3 py-2 rounded-md border border-gray-300"
-              placeholder="Select or enter venue"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Event Type *</label>
-            <input
-              type="text"
-              required
-              value={formData.event}
-              onChange={(e) => setFormData({...formData, event: e.target.value})}
-              className="block w-full px-3 py-2 rounded-md border border-gray-300"
-              placeholder="Wedding, Corporate Event, etc."
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Date *</label>
-            <input
-              type="date"
-              required
-              value={formData.date}
-              onChange={(e) => setFormData({...formData, date: e.target.value})}
-              className="block w-full px-3 py-2 rounded-md border border-gray-300"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Start Time *</label>
-              <input
-                type="time"
-                required
-                value={formData.startTime}
-                onChange={(e) => setFormData({...formData, startTime: e.target.value})}
-                className="block w-full px-3 py-2 rounded-md border border-gray-300"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">End Time *</label>
-              <input
-                type="time"
-                required
-                value={formData.endTime}
-                onChange={(e) => setFormData({...formData, endTime: e.target.value})}
-                className="block w-full px-3 py-2 rounded-md border border-gray-300"
-              />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Total Amount ($) *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Number of Tickets *</label>
             <input
               type="number"
               required
-              value={formData.totalAmount}
-              onChange={(e) => setFormData({...formData, totalAmount: e.target.value})}
+              min="1"
+              max="100"
+              value={formData.numberOfTickets}
+              onChange={(e) => setFormData({...formData, numberOfTickets: e.target.value})}
               className="block w-full px-3 py-2 rounded-md border border-gray-300"
-              placeholder="5000"
+              placeholder="1"
+            />
+            {formData.eventId && (() => {
+              const event = events.find(e => e.id === Number(formData.eventId));
+              if (event?.ticketPrice) {
+                const total = event.ticketPrice * Number(formData.numberOfTickets || 0);
+                return (
+                  <p className="mt-1 text-sm text-gray-600">
+                    Total: ${total.toFixed(2)}
+                  </p>
+                );
+              }
+              return null;
+            })()}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Special Requests</label>
+            <textarea
+              value={formData.specialRequests}
+              onChange={(e) => setFormData({...formData, specialRequests: e.target.value})}
+              className="block w-full px-3 py-2 rounded-md border border-gray-300"
+              placeholder="Any special requirements or requests..."
+              rows={3}
             />
           </div>
           <div className="flex justify-end space-x-3 pt-4">
             <button
               type="button"
-              onClick={() => setShowAddModal(false)}
+              onClick={() => {
+                setShowAddModal(false);
+                setEditingBooking(null);
+              }}
               className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
             >
               Cancel
             </button>
             <button type="submit" className="btn-primary">
-              {editingBooking ? 'Update Booking' : 'Create Booking'}
+              Create Booking
             </button>
           </div>
         </form>

@@ -47,8 +47,51 @@ export interface UpdateBookingStatusRequest {
 
 class BookingService {
   async getAllBookings(): Promise<Booking[]> {
-    return await apiService.get('/Bookings');
+    const data = await apiService.get('/Bookings');
+    return Array.isArray(data) ? data.map(this.mapFromDto) : [];
   }
+  
+  private mapFromDto = (dto: any): Booking => {
+    // Map status string to numeric enum value
+    const mapStatusValue = (value: unknown): BookingStatus => {
+      if (typeof value === 'number') return value as BookingStatus;
+      if (typeof value === 'string') {
+        const statusMap: Record<string, BookingStatus> = {
+          'Pending': BookingStatus.Pending,
+          'Confirmed': BookingStatus.Confirmed,
+          'Cancelled': BookingStatus.Cancelled,
+          'CheckedIn': BookingStatus.CheckedIn,
+          'NoShow': BookingStatus.NoShow,
+          'Refunded': BookingStatus.Refunded
+        };
+        return statusMap[value] ?? BookingStatus.Pending;
+      }
+      return BookingStatus.Pending;
+    };
+
+    return {
+      id: dto.id,
+      eventId: dto.eventId,
+      userId: dto.userId,
+      bookingReference: dto.bookingReference,
+      bookingDate: dto.bookingDate,
+      status: mapStatusValue(dto.status),
+      numberOfTickets: dto.numberOfTickets,
+      totalAmount: dto.totalAmount,
+      amountPaid: dto.amountPaid,
+      paymentDate: dto.paymentDate,
+      paymentMethod: dto.paymentMethod,
+      transactionId: dto.transactionId,
+      qrCode: dto.qrCode,
+      isCheckedIn: dto.isCheckedIn,
+      checkInTime: dto.checkInTime,
+      specialRequests: dto.specialRequests,
+      cancellationReason: dto.cancellationReason,
+      cancellationDate: dto.cancellationDate,
+      createdAt: dto.createdAt,
+      updatedAt: dto.updatedAt
+    };
+  };
 
   async getBookingById(id: number): Promise<Booking> {
     return await apiService.get(`/Bookings/${id}`);
