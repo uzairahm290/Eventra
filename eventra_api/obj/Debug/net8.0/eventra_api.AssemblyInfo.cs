@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("eventra_api")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+a1ae152a25140d8195a6a48c6051492123422456")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+a5579735a622dcfe14c5fdbe2f96aa80fd3e79d8")]
 [assembly: System.Reflection.AssemblyProductAttribute("eventra_api")]
 [assembly: System.Reflection.AssemblyTitleAttribute("eventra_api")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
