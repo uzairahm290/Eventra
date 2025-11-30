@@ -1,0 +1,42 @@
+name: Eventra App CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-lint:
+    runs-on: ubuntu-latest
+
+    # Set the default working directory for all 'run' steps to your project folder
+    defaults:
+      run:
+        working-directory: ./eventra_app
+
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        # critical: tells the cache action where to find the lock file in the subdir
+        cache-dependency-path: eventra_app/package-lock.json
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Lint
+      # Fails if there are linting errors
+      run: npm run lint
+      
+    - name: Build
+      # Fails if the build breaks
+      run: npm run build
