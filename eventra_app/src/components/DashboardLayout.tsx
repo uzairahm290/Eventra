@@ -62,6 +62,7 @@ const DashboardLayout: React.FC = () => {
     { name: 'Calendar', href: '/dashboard/calendar', icon: FiCalendar },
     { name: 'Reports', href: '/dashboard/reports', icon: FiBarChart2 },
     { name: 'Admin Approvals', href: '/dashboard/admin/approvals', icon: FiUsers, adminOnly: true },
+    { name: 'Venue Workers', href: '/dashboard/admin/workers', icon: FiUsers, adminOnly: true },
     { name: 'Help', href: '/dashboard/help', icon: FiHelpCircle },
   ];
 

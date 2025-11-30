@@ -78,11 +78,11 @@ class ApiService {
       // Handle unapproved users (HTTP 403 from backend)
       if (response.status === 403) {
         const err = await this.parseJsonSafe(response);
-        const msg = (typeof err === 'object' && err && (err as any).message) ? (err as any).message : 'Your account is awaiting admin approval.';
+        const msg = (typeof err === 'object' && err && 'message' in err && typeof err.message === 'string') ? err.message : 'Your account is awaiting admin approval.';
         throw new Error(msg);
       }
       const error = await this.parseJsonSafe(response);
-      const msg = (typeof error === 'object' && error && (error as any).message) ? (error as any).message : 'Login failed';
+      const msg = (typeof error === 'object' && error && 'message' in error && typeof error.message === 'string') ? error.message : 'Login failed';
       throw new Error(msg);
     }
 
@@ -186,7 +186,7 @@ class ApiService {
     if (!response.ok) {
       if (response.status === 403) {
         const err = await this.parseJsonSafe(response);
-        const msg = (typeof err === 'object' && err && (err as any).message) ? (err as any).message : 'Forbidden';
+        const msg = (typeof err === 'object' && err && (err as Record<string, unknown>).message) ? (err as Record<string, unknown>).message : 'Forbidden';
         throw new Error(`API Error: ${msg}`);
       }
       throw new Error(`API Error: ${response.statusText}`);
@@ -207,7 +207,7 @@ class ApiService {
     if (!response.ok) {
       if (response.status === 403) {
         const err = await this.parseJsonSafe(response);
-        const msg = (typeof err === 'object' && err && (err as any).message) ? (err as any).message : 'Forbidden';
+        const msg = (typeof err === 'object' && err && 'message' in err && typeof err.message === 'string') ? err.message : 'Forbidden';
         throw new Error(`API Error: ${msg}`);
       }
       throw new Error(`API Error: ${response.statusText}`);

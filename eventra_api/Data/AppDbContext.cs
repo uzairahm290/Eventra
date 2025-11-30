@@ -23,6 +23,7 @@ namespace eventra_api.Data
         public DbSet<RefreshToken> RefreshTokens { get; set; }
         public DbSet<AuditLog> AuditLogs { get; set; }
         public DbSet<Client> Clients { get; set; }
+        public DbSet<Worker> Workers { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -143,6 +144,13 @@ namespace eventra_api.Data
             builder.Entity<Booking>()
                 .Property(b => b.AmountPaid)
                 .HasPrecision(18, 2);
+
+            // Worker relationships
+            builder.Entity<Worker>()
+                .HasOne(w => w.Venue)
+                .WithMany()
+                .HasForeignKey(w => w.VenueId)
+                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }

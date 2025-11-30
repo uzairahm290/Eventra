@@ -118,7 +118,7 @@ const Events: React.FC = () => {
       }
 
       // Assign menus if any were selected
-      const selectedMenuIds = ((data as any)?.selectedMenuIds ?? []).filter((id: number) => Number.isFinite(id));
+      const selectedMenuIds = ((data as Record<string, unknown>)?.selectedMenuIds as number[] ?? []).filter((id: number) => Number.isFinite(id));
       if (savedEvent && selectedMenuIds.length > 0) {
         try {
           await (await import('../services')).apiService.post(`/Events/${savedEvent.id}/menus`, { MenuIds: selectedMenuIds });
@@ -133,7 +133,7 @@ const Events: React.FC = () => {
       toast.success(openEditId === 'new' ? 'Event created successfully!' : 'Event updated successfully!');
     } catch (error) {
       let msg = error instanceof Error ? error.message : 'Failed to save event';
-      if (typeof (error as any)?.message === 'string' && (error as any).message.toLowerCase().includes('forbidden')) {
+      if (typeof (error as Error)?.message === 'string' && (error as Error).message.toLowerCase().includes('forbidden')) {
         msg = 'You are not authorized to modify this event. Please log in as the creator or an admin.';
       }
       console.error('Save error:', error);
@@ -552,10 +552,10 @@ export default Events;
         try {
           const { clientService } = await import('../services');
           const list = await clientService.getAllClients();
-          setClients(list.map((c: any) => ({ id: c.id, name: c.name || c.companyName || `Client #${c.id}`, email: c.email, phone: c.phone })));
+          setClients(list.map((c: { id: number; name?: string; companyName?: string; email: string; phone: string }) => ({ id: c.id, name: c.name || c.companyName || `Client #${c.id}`, email: c.email, phone: c.phone })));
           // Preselect matching client if editing an existing event
           if (initial?.organizerName) {
-            const match = list.find((c: any) => (c.name || c.companyName) === initial!.organizerName);
+            const match = list.find((c: { name?: string; companyName?: string }) => (c.name || c.companyName) === initial!.organizerName);
             if (match) {
               setForm(prev => ({ ...prev, clientId: match.id }));
             }
@@ -568,7 +568,7 @@ export default Events;
         try {
           const { menuService } = await import('../services');
           const list = await menuService.getAll();
-          setMenus(list.map((m: any) => ({ id: m.id, name: m.name })));
+          setMenus(list.map((m: { id: number; name: string }) => ({ id: m.id, name: m.name })));
         } catch (err) {
           console.error('Failed to load menus', err);
         }
@@ -578,7 +578,7 @@ export default Events;
       loadMenus();
     }, []);
 
-    const update = (key: keyof EventItem, value: string | number | boolean | number[] | undefined) => setForm(prev => ({ ...prev, [key]: value as any }));
+    const update = (key: keyof EventItem, value: string | number | boolean | number[] | undefined) => setForm(prev => ({ ...prev, [key]: value }));
 
     const handleSubmit = (e: React.FormEvent) => {
       e.preventDefault();

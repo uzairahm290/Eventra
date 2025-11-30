@@ -3,9 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { FiCalendar, FiMapPin, FiUsers, FiDollarSign, FiTrendingUp, FiArrowUp } from 'react-icons/fi';
 import type { IconType } from 'react-icons';
 import { toast } from 'react-toastify';
+import type { Booking } from '../services/bookingService';
 
 type EventItem = { id: number; title: string; date: string; venueName?: string; status?: number; maxAttendees?: number; currentAttendees?: number; };
-type BookingItem = { id: number; userId: string; eventTitle: string; venueName?: string; bookingDate: string; totalAmount?: number; amountPaid?: number; };
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -31,14 +31,13 @@ const Dashboard: React.FC = () => {
 
         // Bookings
         const bookings = await bookingService.getAllBookings();
-        type BookingDTO = { id: number; userId: string; eventTitle: string; venueName?: string; bookingDate: string; totalAmount?: number };
         const upcoming = (bookings || [])
-          .filter((b: BookingItem) => new Date(b.bookingDate) >= new Date())
-          .sort((a: BookingItem, b: BookingItem) => new Date(a.bookingDate).getTime() - new Date(b.bookingDate).getTime())
+          .filter((b: Booking) => new Date(b.bookingDate) >= new Date())
+          .sort((a: Booking, b: Booking) => new Date(a.bookingDate).getTime() - new Date(b.bookingDate).getTime())
           .slice(0, 5)
-          .map((b: BookingDTO) => ({
+          .map((b: Booking) => ({
             id: b.id,
-            client: b.eventTitle,
+            client: b.eventTitle || 'N/A',
             venue: b.venueName || 'N/A',
             date: new Date(b.bookingDate).toLocaleDateString(),
             amount: `$${(b.totalAmount ?? 0).toFixed(2)}`
@@ -46,8 +45,8 @@ const Dashboard: React.FC = () => {
         setUpcomingBookings(upcoming);
 
         // Stats (basic, derived from loaded data)
-        const totalRevenue = (bookings || []).reduce((sum: number, b: BookingDTO) => sum + (b.totalAmount ?? 0), 0);
-        const totalClientsEst = new Set((bookings || []).map((b: BookingDTO) => b.userId)).size;
+        const totalRevenue = (bookings || []).reduce((sum: number, b: Booking) => sum + (b.totalAmount ?? 0), 0);
+        const totalClientsEst = new Set((bookings || []).map((b: Booking) => b.userId)).size;
 
         const activeMenus = await menuSvcModule.default.getAll().then(list => list.filter(m => m.isAvailable).length).catch(() => 0);
 
@@ -197,7 +196,7 @@ const Dashboard: React.FC = () => {
             </button>
           </div>
 
-          {/* Quick Actions */
+          {/* Quick Actions */}
           <div className="card p-6 mt-6">
             <h2 className="text-xl font-bold text-gray-900 mb-4">Quick Actions</h2>
             <div className="space-y-3">

@@ -24,6 +24,7 @@ import EventDetails from './pages/EventDetails';
 import CreateEvent from './pages/CreateEvent';
 import Help from './pages/Help';
 import AdminApproval from './pages/AdminApproval';
+import Workers from './pages/Workers';
 import Landing from './pages/Landing';
 import './App.css';
 
@@ -117,6 +118,11 @@ function AppRoutes() {
         <Route path="admin/approvals" element={
           <AdminRoute>
             <AdminApproval />
+          </AdminRoute>
+        } />
+        <Route path="admin/workers" element={
+          <AdminRoute>
+            <Workers />
           </AdminRoute>
         } />
       </Route>
