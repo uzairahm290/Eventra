@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { toast } from 'react-toastify';
 
 const ForgotPassword: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -23,8 +24,11 @@ const ForgotPassword: React.FC = () => {
       await new Promise((r) => setTimeout(r, 800));
       // In a real app, call the backend endpoint to send a reset link
       setSent(true);
+      toast.success('Password reset link sent! Check your email.');
     } catch {
-      setError('Failed to send reset link. Please try again later.');
+      const msg = 'Failed to send reset link. Please try again later.';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }

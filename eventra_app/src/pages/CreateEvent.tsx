@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { FiCalendar, FiClock, FiMapPin, FiUsers, FiDollarSign, FiFileText, FiSave, FiX } from 'react-icons/fi';
+import { toast } from 'react-toastify';
 
 const CreateEvent: React.FC = () => {
     const navigate = useNavigate();
@@ -49,6 +50,7 @@ const CreateEvent: React.FC = () => {
         e.preventDefault();
         console.log('Form submitted:', formData);
         // Here you would typically send the data to your API
+        toast.success('Event created successfully!');
         navigate('/dashboard/events');
     };
 

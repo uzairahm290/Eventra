@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { FiPlus, FiSearch, FiMapPin, FiUsers, FiDollarSign, FiEdit, FiTrash2, FiEye } from 'react-icons/fi';
+import { toast } from 'react-toastify';
 import Modal from '../components/Modal';
 import { venueService } from '../services';
 import type { Venue } from '../services';
@@ -42,6 +43,7 @@ const Venues: React.FC = () => {
       setVenuesList(data);
     } catch (error) {
       console.error('Failed to load venues:', error);
+      toast.error('Failed to load venues');
     } finally {
       setLoading(false);
     }
@@ -57,6 +59,20 @@ const Venues: React.FC = () => {
   }, [venuesList, searchTerm]);
 
   const handleDelete = async () => {
+    if (!deleteId) return;
+    try {
+      await venueService.deleteVenue(deleteId);
+      await loadVenues();
+      toast.success('Venue deleted successfully!');
+    } catch (error) {
+      console.error('Failed to delete venue:', error);
+      toast.error('Failed to delete venue');
+    } finally {
+      setDeleteId(null);
+    }
+  };
+
+  const handleDeleteOld = async () => {
     if (!deleteId) return;
     try {
       await venueService.deleteVenue(deleteId);
@@ -215,8 +231,10 @@ const Venues: React.FC = () => {
               try {
                 if (editingId) {
                   await venueService.updateVenue({ id: editingId, ...payload });
+                  toast.success('Venue updated successfully!');
                 } else {
                   await venueService.createVenue(payload);
+                  toast.success('Venue created successfully!');
                 }
                 await loadVenues();
                 setShowAddModal(false);
@@ -225,7 +243,8 @@ const Venues: React.FC = () => {
                 setFormData({ name: '', address: '', capacity: '', pricePerHour: '', amenities: '', image: '' });
               } catch (err) {
                 const msg = err instanceof Error ? err.message : 'Failed to save venue';
-                alert(msg.includes('Forbidden') || msg.includes('401') ? 'Requires Admin role to create/update venues.' : `Failed to save venue: ${msg}`);
+                const errorMsg = msg.includes('Forbidden') || msg.includes('401') ? 'Requires Admin role to create/update venues.' : `Failed to save venue: ${msg}`;
+                toast.error(errorMsg);
               } finally {
                 setSaving(false);
               }

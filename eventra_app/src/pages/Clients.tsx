@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { FiPlus, FiSearch, FiMail, FiTrash2, FiEye, FiEdit } from 'react-icons/fi';
+import { toast } from 'react-toastify';
 import Modal from '../components/Modal';
 import { clientService, type Client, type CreateClientDto } from '../services';
 
@@ -32,6 +33,7 @@ const Clients: React.FC = () => {
       setClientsList(data);
     } catch (error) {
       console.error('Failed to load clients:', error);
+      toast.error('Failed to load clients');
     } finally {
       setLoading(false);
     }
@@ -42,8 +44,10 @@ const Clients: React.FC = () => {
     try {
       await clientService.deleteClient(deleteId);
       await loadClients();
+      toast.success('Client deleted successfully!');
     } catch (error) {
       console.error('Failed to delete client:', error);
+      toast.error('Failed to delete client');
     } finally {
       setDeleteId(null);
     }
@@ -209,8 +213,10 @@ const Clients: React.FC = () => {
             try {
               if (editingId) {
                 await clientService.updateClient(editingId, { ...formData, isActive: true });
+                toast.success('Client updated successfully!');
               } else {
                 await clientService.createClient(formData);
+                toast.success('Client created successfully!');
               }
               await loadClients();
               setShowAddModal(false);
@@ -218,7 +224,7 @@ const Clients: React.FC = () => {
               setFormData({ firstName: '', secondName: '', email: '', phone: '', company: '', address: '' });
             } catch (err) {
               const msg = err instanceof Error ? err.message : 'Failed to save client';
-              alert(`Error: ${msg}`);
+              toast.error(msg);
             } finally {
               setSaving(false);
             }

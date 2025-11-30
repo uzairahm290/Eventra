@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { FiPlus, FiEdit2, FiTrash2, FiDollarSign, FiEye } from 'react-icons/fi';
+import { toast } from 'react-toastify';
 import Modal from '../components/Modal';
 import menuService from '../services/menuService';
 import type { Menu, CreateMenuDto } from '../services/menuService';
@@ -37,6 +38,7 @@ const Menus: React.FC = () => {
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : 'Failed to load menus';
         setError(msg);
+        toast.error(msg);
       } finally {
         setLoading(false);
       }
@@ -69,9 +71,14 @@ const Menus: React.FC = () => {
     if (deleteId) {
       // Attempt API delete; if unauthorized, reflect error
       menuService.delete(deleteId)
-        .then(() => setMenus(menus.filter(m => m.id !== deleteId)))
+        .then(() => {
+          setMenus(menus.filter(m => m.id !== deleteId));
+          toast.success('Menu deleted successfully!');
+        })
         .catch(() => {
-          setError('Delete failed. You may need to login as Admin.');
+          const msg = 'Delete failed. You may need to login as Admin.';
+          setError(msg);
+          toast.error(msg);
         })
         .finally(() => setDeleteId(null));
     }
@@ -253,8 +260,10 @@ const Menus: React.FC = () => {
           try {
             if (editingMenu) {
               await menuService.update(editingMenu.id, formData);
+              toast.success('Menu updated successfully!');
             } else {
               await menuService.create(formData);
+              toast.success('Menu created successfully!');
             }
             const refreshed = await menuService.getByEvent(eventId);
             setMenus(refreshed);
@@ -262,6 +271,7 @@ const Menus: React.FC = () => {
           } catch (e: unknown) {
             const msg = e instanceof Error ? e.message : 'Save failed. You may need to login as Admin.';
             setError(msg);
+            toast.error(msg);
           }
         }} className="space-y-4">
           <div>
