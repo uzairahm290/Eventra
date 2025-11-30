@@ -64,6 +64,8 @@ namespace eventra_api.Models
 
         public DateTime? UpdatedAt { get; set; }
 
+        public bool IsApprovedByAdmin { get; set; } = false; // Requires admin approval
+
         // Navigation properties
         public Event Event { get; set; } = null!;
         public ApplicationUser User { get; set; } = null!;

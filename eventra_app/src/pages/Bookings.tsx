@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FiPlus, FiSearch, FiCalendar, FiMapPin, FiUser, FiEdit, FiTrash2, FiEye, FiCheckCircle } from 'react-icons/fi';
+import { FiPlus, FiSearch, FiCalendar, FiMapPin, FiUser, FiEdit, FiTrash2, FiEye, FiCheckCircle, FiCheck, FiX } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import Modal from '../components/Modal';
 import { bookingService } from '../services/bookingService';
@@ -60,6 +60,28 @@ const Bookings: React.FC = () => {
       } finally {
         setDeleteId(null);
       }
+    }
+  };
+
+  const handleApprove = async (bookingId: number) => {
+    try {
+      await bookingService.approveBooking(bookingId);
+      await loadBookings();
+      toast.success('Booking approved successfully!');
+    } catch (error) {
+      console.error('Failed to approve booking:', error);
+      toast.error('Failed to approve booking');
+    }
+  };
+
+  const handleReject = async (bookingId: number) => {
+    try {
+      await bookingService.rejectBooking(bookingId);
+      await loadBookings();
+      toast.success('Booking rejected successfully!');
+    } catch (error) {
+      console.error('Failed to reject booking:', error);
+      toast.error('Failed to reject booking');
     }
   };
 
@@ -189,6 +211,9 @@ const Bookings: React.FC = () => {
                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
                 </th>
+                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Approval
+                </th>
                 <th className="px-6 py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
@@ -197,13 +222,13 @@ const Bookings: React.FC = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={9} className="px-6 py-12 text-center text-gray-500">
                     Loading bookings...
                   </td>
                 </tr>
               ) : filteredBookings.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={9} className="px-6 py-12 text-center text-gray-500">
                     No bookings found
                   </td>
                 </tr>
@@ -277,6 +302,34 @@ const Bookings: React.FC = () => {
                     <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(booking.status)}`}>
                       {booking.status === 1 ? 'Confirmed' : booking.status === 0 ? 'Pending' : booking.status === 2 ? 'Cancelled' : 'Checked In'}
                     </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {booking.isApprovedByAdmin ? (
+                      <span className="px-3 py-1 inline-flex items-center text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                        <FiCheck className="mr-1 h-3 w-3" />
+                        Approved
+                      </span>
+                    ) : (
+                      <div className="flex items-center space-x-2">
+                        <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                          Pending Approval
+                        </span>
+                        <button
+                          onClick={() => handleApprove(booking.id)}
+                          className="text-green-600 hover:text-green-800 p-1.5 rounded hover:bg-green-50"
+                          title="Approve booking"
+                        >
+                          <FiCheck className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => handleReject(booking.id)}
+                          className="text-red-600 hover:text-red-800 p-1.5 rounded hover:bg-red-50"
+                          title="Reject booking"
+                        >
+                          <FiX className="h-4 w-4" />
+                        </button>
+                      </div>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex items-center justify-end space-x-2">

@@ -13,6 +13,7 @@ namespace eventra_api.Models
         public DateTime DateRegistered { get; set; } = DateTime.Now;
         public DateTime? LastLoginAt { get; set; }
         public bool IsActive { get; set; } = true;
+        public bool IsApproved { get; set; } = false; // Admin approval required
 
         // Navigation properties
         public ICollection<Event> CreatedEvents { get; set; } = new List<Event>();

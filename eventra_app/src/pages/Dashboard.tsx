@@ -1,86 +1,63 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { FiCalendar, FiMapPin, FiUsers, FiDollarSign, FiTrendingUp, FiArrowUp } from 'react-icons/fi';
+import { toast } from 'react-toastify';
+
+type EventItem = { id: number; title: string; date: string; venueName?: string; status?: number; maxAttendees?: number; currentAttendees?: number; };
+type BookingItem = { id: number; userId: string; bookingDate: string; totalAmount?: number; amountPaid?: number; };
 
 const Dashboard: React.FC = () => {
-  const stats = [
-    {
-      name: 'Total Events',
-      value: '24',
-      change: '+12%',
-      trend: 'up',
-      icon: FiCalendar,
-      color: 'blue',
-    },
-    {
-      name: 'Active Venues',
-      value: '8',
-      change: '+2',
-      trend: 'up',
-      icon: FiMapPin,
-      color: 'green',
-    },
-    {
-      name: 'Total Clients',
-      value: '156',
-      change: '+23%',
-      trend: 'up',
-      icon: FiUsers,
-      color: 'orange',
-    },
-    {
-      name: 'Revenue',
-      value: '$45,231',
-      change: '+18%',
-      trend: 'up',
-      icon: FiDollarSign,
-      color: 'emerald',
-    },
-  ];
+  const [stats, setStats] = useState<Array<{name: string; value: string; change: string; trend: 'up' | 'down'; icon: any; color: string;}>>([]);
+  const [recentEvents, setRecentEvents] = useState<EventItem[]>([]);
+  const [upcomingBookings, setUpcomingBookings] = useState<Array<{ id: number; client: string; venue: string; date: string; amount: string }>>([]);
 
-  const recentEvents = [
-    {
-      id: 1,
-      name: 'Corporate Gala 2025',
-      type: 'Corporate',
-      date: 'Nov 25, 2025',
-      venue: 'Grand Ballroom',
-      status: 'Confirmed',
-      guests: 200,
-    },
-    {
-      id: 2,
-      name: 'Johnson Wedding',
-      type: 'Wedding',
-      date: 'Dec 5, 2025',
-      venue: 'Garden Pavilion',
-      status: 'Pending',
-      guests: 150,
-    },
-    {
-      id: 3,
-      name: 'Tech Conference',
-      type: 'Conference',
-      date: 'Dec 12, 2025',
-      venue: 'Convention Center',
-      status: 'Confirmed',
-      guests: 500,
-    },
-    {
-      id: 4,
-      name: 'Birthday Celebration',
-      type: 'Birthday',
-      date: 'Nov 30, 2025',
-      venue: 'Rooftop Terrace',
-      status: 'Confirmed',
-      guests: 75,
-    },
-  ];
+  useEffect(() => {
+    const loadDashboard = async () => {
+      try {
+        const { eventService, bookingService } = await import('../services');
+        // Events
+        const events = await eventService.getAllEvents();
+        const totalEvents = Array.isArray(events) ? events.length : 0;
+        const upcomingEvents = (events || []).filter((e: any) => new Date(e.date) >= new Date()).length;
+        const latestEvents: EventItem[] = (events || [])
+          .sort((a: any, b: any) => new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime())
+          .slice(0, 5);
 
-  const upcomingBookings = [
-    { id: 1, client: 'Sarah Anderson', venue: 'Grand Ballroom', date: 'Nov 25, 2025', amount: '$5,200' },
-    { id: 2, client: 'Michael Chen', venue: 'Garden Pavilion', date: 'Dec 5, 2025', amount: '$3,800' },
-    { id: 3, client: 'Emily Rodriguez', venue: 'Convention Center', date: 'Dec 12, 2025', amount: '$12,500' },
-  ];
+        setRecentEvents(latestEvents);
+
+        // Bookings
+        const bookings = await bookingService.getAllBookings();
+        const upcoming = (bookings || [])
+          .filter((b: BookingItem) => new Date(b.bookingDate) >= new Date())
+          .sort((a: BookingItem, b: BookingItem) => new Date(a.bookingDate).getTime() - new Date(b.bookingDate).getTime())
+          .slice(0, 5)
+          .map((b: any) => ({
+            id: b.id,
+            client: `User #${b.userId}`,
+            venue: 'N/A',
+            date: new Date(b.bookingDate).toLocaleDateString(),
+            amount: `$${(b.totalAmount ?? 0).toFixed(2)}`
+          }));
+        setUpcomingBookings(upcoming);
+
+        // Stats (basic, derived from loaded data)
+        const totalRevenue = (bookings || []).reduce((sum: number, b: any) => sum + (b.totalAmount ?? 0), 0);
+        const totalClientsEst = new Set((bookings || []).map((b: any) => b.userId)).size;
+
+        setStats([
+          { name: 'Total Events', value: String(totalEvents), change: `${upcomingEvents} upcoming`, trend: 'up', icon: FiCalendar, color: 'blue' },
+          { name: 'Active Venues', value: '—', change: '+0', trend: 'up', icon: FiMapPin, color: 'green' },
+          { name: 'Total Clients', value: String(totalClientsEst), change: '+', trend: 'up', icon: FiUsers, color: 'orange' },
+          { name: 'Revenue', value: `$${totalRevenue.toFixed(2)}`, change: 'MTD', trend: 'up', icon: FiDollarSign, color: 'emerald' },
+        ]);
+      } catch (error) {
+        console.error('Failed to load dashboard data:', error);
+        toast.error('Failed to load dashboard data');
+      }
+    };
+    loadDashboard();
+  }, []);
+
+  
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -150,7 +127,7 @@ const Dashboard: React.FC = () => {
                       Venue
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Guests
+                      Attendees
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Status
@@ -162,16 +139,16 @@ const Dashboard: React.FC = () => {
                     <tr key={event.id} className="hover:bg-gray-50">
                       <td className="px-4 py-4 whitespace-nowrap">
                         <div>
-                          <div className="text-sm font-medium text-gray-900">{event.name}</div>
-                          <div className="text-sm text-gray-500">{event.type}</div>
+                          <div className="text-sm font-medium text-gray-900">{event.title}</div>
+                          <div className="text-sm text-gray-500">Event #{event.id}</div>
                         </div>
                       </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">{event.date}</td>
-                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{event.venue}</td>
-                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">{event.guests}</td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">{new Date(event.date).toLocaleDateString()}</td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{event.venueName ?? 'N/A'}</td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">{event.currentAttendees ?? 0}/{event.maxAttendees ?? '—'}</td>
                       <td className="px-4 py-4 whitespace-nowrap">
-                        <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(event.status)}`}>
-                          {event.status}
+                        <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(typeof event.status === 'string' ? event.status : (event.status === 1 ? 'Confirmed' : event.status === 0 ? 'Pending' : event.status === 2 ? 'Cancelled' : 'Draft'))}`}>
+                          {typeof event.status === 'string' ? event.status : (event.status === 1 ? 'Confirmed' : event.status === 0 ? 'Pending' : event.status === 2 ? 'Cancelled' : 'Draft')}
                         </span>
                       </td>
                     </tr>
@@ -192,7 +169,7 @@ const Dashboard: React.FC = () => {
             <div className="space-y-4">
               {upcomingBookings.map((booking) => (
                 <div key={booking.id} className="flex items-start space-x-3 p-4 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
-                  <div className="flex-shrink-0">
+                  <div className="shrink-0">
                     <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center">
                       <FiCalendar className="h-5 w-5 text-primary-600" />
                     </div>

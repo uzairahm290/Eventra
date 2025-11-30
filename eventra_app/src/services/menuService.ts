@@ -29,7 +29,8 @@ export interface CreateMenuDto {
   allergenInfo: string;
 }
 
-const basePath = '/api/Menus';
+// apiService already prefixes endpoints with '/api', so basePath must be relative
+const basePath = '/Menus';
 
 export const menuService = {
   getAll: async (): Promise<Menu[]> => {
