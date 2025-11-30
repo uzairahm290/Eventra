@@ -1,14 +1,25 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { FiSearch, FiMail, FiTrash2, FiEye } from 'react-icons/fi';
+import { FiPlus, FiSearch, FiMail, FiTrash2, FiEye, FiEdit } from 'react-icons/fi';
 import Modal from '../components/Modal';
-import { clientService, type Client } from '../services';
+import { clientService, type Client, type CreateClientDto } from '../services';
 
 const Clients: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [viewId, setViewId] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [viewId, setViewId] = useState<number | null>(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [clientsList, setClientsList] = useState<Client[]>([]);
+  const [formData, setFormData] = useState<CreateClientDto>({
+    firstName: '',
+    secondName: '',
+    email: '',
+    phone: '',
+    company: '',
+    address: ''
+  });
 
   useEffect(() => {
     loadClients();
@@ -44,7 +55,7 @@ const Clients: React.FC = () => {
       c.firstName?.toLowerCase().includes(term) ||
       c.secondName?.toLowerCase().includes(term) ||
       c.email?.toLowerCase().includes(term) ||
-      c.userName?.toLowerCase().includes(term)
+      c.company?.toLowerCase().includes(term)
     );
   }, [clientsList, searchTerm]);
 
@@ -54,8 +65,19 @@ const Clients: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Clients</h1>
-          <p className="mt-2 text-gray-600">View and manage client accounts</p>
+          <p className="mt-2 text-gray-600">Manage your client contacts and information</p>
         </div>
+        <button
+          onClick={() => {
+            setEditingId(null);
+            setFormData({ firstName: '', secondName: '', email: '', phone: '', company: '', address: '' });
+            setShowAddModal(true);
+          }}
+          className="mt-4 sm:mt-0 btn-primary flex items-center"
+        >
+          <FiPlus className="mr-2 h-5 w-5" />
+          Add Client
+        </button>
       </div>
 
       {/* Search Bar */}
@@ -92,7 +114,7 @@ const Clients: React.FC = () => {
                     Contact
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Username
+                    Company
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Registered
@@ -119,7 +141,7 @@ const Clients: React.FC = () => {
                           </div>
                           <div className="ml-4">
                             <div className="text-sm font-medium text-gray-900">{fullName}</div>
-                            <div className="text-xs text-gray-500">ID: {client.id.slice(0, 8)}</div>
+                            <div className="text-xs text-gray-500">ID: {client.id}</div>
                           </div>
                         </div>
                       </td>
@@ -132,7 +154,7 @@ const Clients: React.FC = () => {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">{client.userName || 'N/A'}</div>
+                        <div className="text-sm text-gray-900">{client.company || '-'}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {new Date(client.dateRegistered).toLocaleDateString()}
@@ -141,6 +163,20 @@ const Clients: React.FC = () => {
                         <div className="flex items-center justify-end space-x-2">
                           <button onClick={() => setViewId(client.id)} className="text-blue-600 hover:text-blue-800 p-2 rounded-lg hover:bg-blue-50">
                             <FiEye className="h-4 w-4" />
+                          </button>
+                          <button onClick={() => {
+                            setEditingId(client.id);
+                            setFormData({
+                              firstName: client.firstName,
+                              secondName: client.secondName,
+                              email: client.email,
+                              phone: client.phone || '',
+                              company: client.company || '',
+                              address: client.address || ''
+                            });
+                            setShowAddModal(true);
+                          }} className="text-green-600 hover:text-green-800 p-2 rounded-lg hover:bg-green-50">
+                            <FiEdit className="h-4 w-4" />
                           </button>
                           <button onClick={() => setDeleteId(client.id)} className="text-red-600 hover:text-red-800 p-2 rounded-lg hover:bg-red-50">
                             <FiTrash2 className="h-4 w-4" />
@@ -155,6 +191,119 @@ const Clients: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Add/Edit Client Modal */}
+      <Modal
+        open={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        title={editingId ? 'Edit Client' : 'Add New Client'}
+      >
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            if (!formData.firstName || !formData.secondName || !formData.email) {
+              alert('Please fill in all required fields');
+              return;
+            }
+            setSaving(true);
+            try {
+              if (editingId) {
+                await clientService.updateClient(editingId, { ...formData, isActive: true });
+              } else {
+                await clientService.createClient(formData);
+              }
+              await loadClients();
+              setShowAddModal(false);
+              setEditingId(null);
+              setFormData({ firstName: '', secondName: '', email: '', phone: '', company: '', address: '' });
+            } catch (err) {
+              const msg = err instanceof Error ? err.message : 'Failed to save client';
+              alert(`Error: ${msg}`);
+            } finally {
+              setSaving(false);
+            }
+          }}
+          className="space-y-4"
+        >
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">First Name *</label>
+              <input
+                type="text"
+                required
+                value={formData.firstName}
+                onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                className="block w-full px-3 py-2 rounded-md border border-gray-300"
+                placeholder="John"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Last Name *</label>
+              <input
+                type="text"
+                required
+                value={formData.secondName}
+                onChange={(e) => setFormData({ ...formData, secondName: e.target.value })}
+                className="block w-full px-3 py-2 rounded-md border border-gray-300"
+                placeholder="Doe"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Email *</label>
+            <input
+              type="email"
+              required
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              className="block w-full px-3 py-2 rounded-md border border-gray-300"
+              placeholder="john@example.com"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
+            <input
+              type="tel"
+              value={formData.phone}
+              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              className="block w-full px-3 py-2 rounded-md border border-gray-300"
+              placeholder="+1 (555) 000-0000"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Company</label>
+            <input
+              type="text"
+              value={formData.company}
+              onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+              className="block w-full px-3 py-2 rounded-md border border-gray-300"
+              placeholder="Acme Corp"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Address</label>
+            <textarea
+              rows={3}
+              value={formData.address}
+              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+              className="block w-full px-3 py-2 rounded-md border border-gray-300"
+              placeholder="123 Main St, City, State 12345"
+            />
+          </div>
+          <div className="flex justify-end space-x-3 pt-4">
+            <button
+              type="button"
+              onClick={() => setShowAddModal(false)}
+              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button type="submit" className="btn-primary" disabled={saving}>
+              {saving ? 'Saving...' : editingId ? 'Update Client' : 'Add Client'}
+            </button>
+          </div>
+        </form>
+      </Modal>
 
       {/* View Modal */}
       <Modal
@@ -182,8 +331,16 @@ const Clients: React.FC = () => {
                   <p className="text-base text-gray-900">{client.email || 'N/A'}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Username</label>
-                  <p className="text-base text-gray-900">{client.userName || 'N/A'}</p>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">Phone</label>
+                  <p className="text-base text-gray-900">{client.phone || 'N/A'}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">Company</label>
+                  <p className="text-base text-gray-900">{client.company || 'N/A'}</p>
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-500 mb-1">Address</label>
+                  <p className="text-base text-gray-900">{client.address || 'N/A'}</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">Date Registered</label>
