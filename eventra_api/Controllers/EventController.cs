@@ -260,7 +260,8 @@ namespace eventra_api.Controllers
             if (updateDto.RequiresApproval.HasValue) eventItem.RequiresApproval = updateDto.RequiresApproval.Value;
             if (updateDto.IsPublic.HasValue) eventItem.IsPublic = updateDto.IsPublic.Value;
 
-            eventItem.UpdatedBy = user.Id;
+            var currentUserId = User.Identity?.IsAuthenticated == true ? (await _userManager.GetUserAsync(User))?.Id : null;
+            eventItem.UpdatedBy = currentUserId ?? eventItem.CreatedBy;
             eventItem.UpdatedAt = DateTime.UtcNow;
 
             try
@@ -314,8 +315,9 @@ namespace eventra_api.Controllers
             if (eventItem.Attendees.Any() || eventItem.Bookings.Any())
             {
                 // Soft delete by changing status
+                var currentUserId = User.Identity?.IsAuthenticated == true ? (await _userManager.GetUserAsync(User))?.Id : null;
                 eventItem.Status = EventStatus.Cancelled;
-                eventItem.UpdatedBy = user.Id;
+                eventItem.UpdatedBy = currentUserId ?? eventItem.CreatedBy;
                 eventItem.UpdatedAt = DateTime.UtcNow;
                 await _context.SaveChangesAsync();
                 return Ok(new { message = "Event cancelled (has active registrations/bookings)." });

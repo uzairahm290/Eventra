@@ -57,9 +57,11 @@ const Events: React.FC = () => {
 
   const handleSave = async (data: Partial<Event>) => {
     try {
+      setError(null);
+      
       // Validate required fields
       if (!data.title || !data.date || !data.location || !data.description || data.maxAttendees === undefined || data.category === undefined || data.status === undefined) {
-        console.error('Missing required fields');
+        setError('Please fill in all required fields');
         return;
       }
 
@@ -105,10 +107,12 @@ const Events: React.FC = () => {
           organizerPhone: data.organizerPhone,
         });
       }
-      await loadEvents();
+      
       setOpenEditId(null);
+      await loadEvents();
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Failed to save event';
+      console.error('Save error:', error);
       setError(msg);
     }
   };
@@ -371,12 +375,16 @@ const Events: React.FC = () => {
         title={openEditId === 'new' ? 'Create Event' : 'Edit Event'}
         maxWidthClass="max-w-2xl"
       >
-        <EventForm
-          key={openEditId ?? 'none'}
-          initial={openEditId === 'new' ? undefined : currentEditing || undefined}
-          onCancel={() => setOpenEditId(null)}
-          onSave={handleSave}
-        />
+        {(openEditId === 'new' || currentEditing) ? (
+          <EventForm
+            key={openEditId ?? 'none'}
+            initial={openEditId === 'new' ? undefined : currentEditing || undefined}
+            onCancel={() => setOpenEditId(null)}
+            onSave={handleSave}
+          />
+        ) : (
+          <div className="p-4 text-gray-500">Loading...</div>
+        )}
       </Modal>
 
       {/* View Modal */}

@@ -114,7 +114,8 @@ class EventService {
   }
 
   async updateEvent(eventData: UpdateEventRequest): Promise<Event> {
-    const dto = await apiService.put(`/Events/${eventData.id}`, eventData);
+    const { id, ...updateData } = eventData;
+    const dto = await apiService.put(`/Events/${id}`, updateData);
     return this.mapFromDto(dto);
   }
 
@@ -137,11 +138,18 @@ class EventService {
       return fallback;
     };
 
+    // Helper to format date for HTML date input (yyyy-MM-dd)
+    const formatDate = (value: unknown): string => {
+      if (!value) return new Date().toISOString().split('T')[0];
+      const dateStr = typeof value === 'string' ? value : new Date(value as string | number | Date).toISOString();
+      return dateStr.split('T')[0];
+    };
+
     return {
       id: d.id as number,
       title: d.title as string,
-      date: typeof d.date === 'string' ? (d.date as string) : new Date(d.date as string | number | Date).toISOString(),
-      endDate: d.endDate ? (typeof d.endDate === 'string' ? (d.endDate as string) : new Date(d.endDate as string | number | Date).toISOString()) : undefined,
+      date: formatDate(d.date),
+      endDate: d.endDate ? formatDate(d.endDate) : undefined,
       location: d.location as string,
       description: (d.description as string) ?? '',
       maxAttendees: d.maxAttendees as number,
