@@ -59,7 +59,7 @@ namespace eventra_api.Controllers
         }
 
         // GET: api/Bookings/event/5
-        [Authorize(Roles = "Admin")]
+        [Authorize]
         [HttpGet("event/{eventId}")]
         public async Task<ActionResult<IEnumerable<BookingDto>>> GetEventBookings(int eventId)
         {
@@ -117,7 +117,7 @@ namespace eventra_api.Controllers
             }
 
             // Check if user owns this booking or is admin
-            if (booking.UserId != user.Id && !User.IsInRole("Admin"))
+            if (booking.UserId != user.Id)
             {
                 return Forbid();
             }
@@ -284,7 +284,7 @@ namespace eventra_api.Controllers
         }
 
         // POST: api/Bookings/5/checkin
-        [Authorize(Roles = "Admin")]
+        [Authorize]
         [HttpPost("{id}/checkin")]
         public async Task<IActionResult> CheckInBooking(int id)
         {
@@ -333,7 +333,7 @@ namespace eventra_api.Controllers
             }
 
             // Check if user owns this booking or is admin
-            if (booking.UserId != user.Id && !User.IsInRole("Admin"))
+            if (booking.UserId != user.Id)
             {
                 return Forbid();
             }

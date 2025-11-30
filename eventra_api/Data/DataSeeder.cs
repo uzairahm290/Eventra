@@ -10,12 +10,13 @@ namespace eventra_api.Data
         {
             var context = serviceProvider.GetRequiredService<AppDbContext>();
             var userManager = serviceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+            var roleManager = serviceProvider.GetRequiredService<RoleManager<IdentityRole>>();
 
             // Apply migrations
             await context.Database.MigrateAsync();
 
-            // Seed Users
-            var admin = await SeedUsersAsync(userManager);
+            // Seed Roles and Users
+            var admin = await SeedUsersAsync(userManager, roleManager);
 
             // Seed Venues
             await SeedVenuesAsync(context);
@@ -27,8 +28,18 @@ namespace eventra_api.Data
             await SeedMenusAsync(context);
         }
 
-        private static async Task<ApplicationUser> SeedUsersAsync(UserManager<ApplicationUser> userManager)
+        private static async Task<ApplicationUser> SeedUsersAsync(UserManager<ApplicationUser> userManager, RoleManager<IdentityRole> roleManager)
         {
+            // Ensure roles exist
+            var roles = new[] { "Admin", "User" };
+            foreach (var role in roles)
+            {
+                if (!await roleManager.RoleExistsAsync(role))
+                {
+                    await roleManager.CreateAsync(new IdentityRole(role));
+                }
+            }
+
             // Seed Admin User
             var adminEmail = "dev@eventra.local";
             ApplicationUser? admin = await userManager.FindByEmailAsync(adminEmail);
@@ -47,6 +58,12 @@ namespace eventra_api.Data
                 await userManager.CreateAsync(admin, "Dev@12345!");
             }
 
+            // Ensure admin is in Admin role
+            if (!await userManager.IsInRoleAsync(admin, "Admin"))
+            {
+                await userManager.AddToRoleAsync(admin, "Admin");
+            }
+
             // Seed Sample Users
             if (userManager.Users.Count() < 3)
             {
@@ -60,6 +77,10 @@ namespace eventra_api.Data
                     IsActive = true
                 };
                 await userManager.CreateAsync(user1, "User@12345!");
+                if (!await userManager.IsInRoleAsync(user1, "User"))
+                {
+                    await userManager.AddToRoleAsync(user1, "User");
+                }
 
                 var user2 = new ApplicationUser
                 {
@@ -71,6 +92,10 @@ namespace eventra_api.Data
                     IsActive = true
                 };
                 await userManager.CreateAsync(user2, "User@12345!");
+                if (!await userManager.IsInRoleAsync(user2, "User"))
+                {
+                    await userManager.AddToRoleAsync(user2, "User");
+                }
             }
 
             return admin;

@@ -1,117 +1,52 @@
-import React, { useState } from 'react';
-import { FiPlus, FiSearch, FiMail, FiPhone, FiEdit, FiTrash2, FiEye, FiMapPin } from 'react-icons/fi';
+import React, { useState, useEffect, useMemo } from 'react';
+import { FiSearch, FiMail, FiTrash2, FiEye } from 'react-icons/fi';
 import Modal from '../components/Modal';
+import { clientService, type Client } from '../services';
 
 const Clients: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [editingClient, setEditingClient] = useState<typeof formData | null>(null);
-  const [deleteId, setDeleteId] = useState<number | null>(null);
-  const [viewId, setViewId] = useState<number | null>(null);
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    company: '',
-    address: '',
-  });
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [viewId, setViewId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [clientsList, setClientsList] = useState<Client[]>([]);
 
-  const [clientsList, setClientsList] = useState([
-    {
-      id: 1,
-      name: 'Sarah Anderson',
-      email: 'sarah.anderson@email.com',
-      phone: '+1 (555) 123-4567',
-      company: 'Tech Corp Inc.',
-      address: '123 Tech Street, Silicon Valley',
-      totalBookings: 5,
-      totalSpent: '$45,200',
-      status: 'Active',
-      lastBooking: '2025-11-20',
-    },
-    {
-      id: 2,
-      name: 'Michael Chen',
-      email: 'michael.chen@email.com',
-      phone: '+1 (555) 234-5678',
-      company: 'Innovation Labs',
-      address: '456 Innovation Ave, Tech City',
-      totalBookings: 8,
-      totalSpent: '$78,500',
-      status: 'Active',
-      lastBooking: '2025-11-18',
-    },
-    {
-      id: 3,
-      name: 'Emily Rodriguez',
-      email: 'emily.rodriguez@email.com',
-      phone: '+1 (555) 345-6789',
-      company: 'Creative Solutions',
-      address: '789 Creative Blvd, Design Town',
-      totalBookings: 3,
-      totalSpent: '$28,900',
-      status: 'Active',
-      lastBooking: '2025-11-15',
-    },
-    {
-      id: 4,
-      name: 'David Thompson',
-      email: 'david.thompson@email.com',
-      phone: '+1 (555) 456-7890',
-      company: 'Hope Foundation',
-      address: '321 Charity Lane, Nonprofit City',
-      totalBookings: 12,
-      totalSpent: '$95,300',
-      status: 'VIP',
-      lastBooking: '2025-11-22',
-    },
-    {
-      id: 5,
-      name: 'Jennifer Lee',
-      email: 'jennifer.lee@email.com',
-      phone: '+1 (555) 567-8901',
-      company: 'Marketing Pro',
-      address: '654 Marketing St, Business Park',
-      totalBookings: 2,
-      totalSpent: '$18,400',
-      status: 'Active',
-      lastBooking: '2025-10-28',
-    },
-  ]);
+  useEffect(() => {
+    loadClients();
+  }, []);
 
-  const handleDelete = () => {
-    if (deleteId) {
-      setClientsList(prev => prev.filter(c => c.id !== deleteId));
+  const loadClients = async () => {
+    try {
+      setLoading(true);
+      const data = await clientService.getAllClients();
+      setClientsList(data);
+    } catch (error) {
+      console.error('Failed to load clients:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    try {
+      await clientService.deleteClient(deleteId);
+      await loadClients();
+    } catch (error) {
+      console.error('Failed to delete client:', error);
+    } finally {
       setDeleteId(null);
     }
   };
 
-  const handleEdit = (client: { id: number; name: string; email: string; phone: string; company: string; address: string; totalBookings: number; totalSpent: string; status: string; lastBooking: string }) => {
-    setEditingClient(client);
-    setFormData({
-      name: client.name,
-      email: client.email,
-      phone: client.phone,
-      company: client.company,
-      address: client.address,
-    });
-    setShowAddModal(true);
-  };
-
-  const clients = clientsList;
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'VIP':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'Active':
-        return 'bg-green-100 text-green-800';
-      case 'Inactive':
-        return 'bg-gray-100 text-gray-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
+  const filteredClients = useMemo(() => {
+    const term = searchTerm.toLowerCase();
+    return clientsList.filter(c =>
+      c.firstName?.toLowerCase().includes(term) ||
+      c.secondName?.toLowerCase().includes(term) ||
+      c.email?.toLowerCase().includes(term) ||
+      c.userName?.toLowerCase().includes(term)
+    );
+  }, [clientsList, searchTerm]);
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -119,18 +54,8 @@ const Clients: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Clients</h1>
-          <p className="mt-2 text-gray-600">Manage your client relationships and contacts</p>
+          <p className="mt-2 text-gray-600">View and manage client accounts</p>
         </div>
-        <button 
-          onClick={() => {
-            setFormData({ name: '', email: '', phone: '', company: '', address: '' });
-            setShowAddModal(true);
-          }}
-          className="mt-4 sm:mt-0 btn-primary flex items-center"
-        >
-          <FiPlus className="mr-2 h-5 w-5" />
-          Add Client
-        </button>
       </div>
 
       {/* Search Bar */}
@@ -151,202 +76,85 @@ const Clients: React.FC = () => {
 
       {/* Clients Table */}
       <div className="card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Client
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Contact
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Company
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Bookings
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Total Spent
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {clients.map((client) => (
-                <tr key={client.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0 h-10 w-10">
-                        <div className="h-10 w-10 rounded-full bg-gradient-to-r from-primary-600 to-cyan-600 flex items-center justify-center">
-                          <span className="text-white font-semibold text-sm">
-                            {client.name.split(' ').map(n => n[0]).join('')}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">{client.name}</div>
-                        <div className="text-xs text-gray-500">Last booking: {client.lastBooking}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
-                      <div className="flex items-center mb-1">
-                        <FiMail className="mr-2 h-4 w-4 text-gray-400" />
-                        {client.email}
-                      </div>
-                      <div className="flex items-center">
-                        <FiPhone className="mr-2 h-4 w-4 text-gray-400" />
-                        {client.phone}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{client.company}</div>
-                    <div className="flex items-center text-xs text-gray-500 mt-1">
-                      <FiMapPin className="mr-1 h-3 w-3" />
-                      {client.address.split(',')[0]}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
-                    {client.totalBookings}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
-                    {client.totalSpent}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(client.status)}`}>
-                      {client.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex items-center justify-end space-x-2">
-                      <button onClick={() => setViewId(client.id)} className="text-blue-600 hover:text-blue-800 p-2 rounded-lg hover:bg-blue-50">
-                        <FiEye className="h-4 w-4" />
-                      </button>
-                      <button onClick={() => handleEdit(client)} className="text-green-600 hover:text-green-800 p-2 rounded-lg hover:bg-green-50">
-                        <FiEdit className="h-4 w-4" />
-                      </button>
-                      <button onClick={() => setDeleteId(client.id)} className="text-red-600 hover:text-red-800 p-2 rounded-lg hover:bg-red-50">
-                        <FiTrash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </td>
+        {loading ? (
+          <div className="text-center py-12 text-gray-500">Loading clients...</div>
+        ) : filteredClients.length === 0 ? (
+          <div className="text-center py-12 text-gray-500">No clients found</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Client
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Contact
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Username
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Registered
+                  </th>
+                  <th className="px-6 py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pagination */}
-        <div className="bg-gray-50 px-6 py-4 flex items-center justify-between border-t border-gray-200">
-          <div>
-            <p className="text-sm text-gray-700">
-              Showing <span className="font-medium">1</span> to <span className="font-medium">5</span> of{' '}
-              <span className="font-medium">5</span> results
-            </p>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredClients.map((client) => {
+                  const fullName = [client.firstName, client.secondName].filter(Boolean).join(' ');
+                  const initials = [client.firstName?.[0], client.secondName?.[0]].filter(Boolean).join('');
+                  return (
+                    <tr key={client.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className="shrink-0 h-10 w-10">
+                            <div className="h-10 w-10 rounded-full bg-linear-to-r from-primary-600 to-cyan-600 flex items-center justify-center">
+                              <span className="text-white font-semibold text-sm">
+                                {initials || '?'}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="ml-4">
+                            <div className="text-sm font-medium text-gray-900">{fullName}</div>
+                            <div className="text-xs text-gray-500">ID: {client.id.slice(0, 8)}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">
+                          <div className="flex items-center">
+                            <FiMail className="mr-2 h-4 w-4 text-gray-400" />
+                            {client.email || 'N/A'}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">{client.userName || 'N/A'}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {new Date(client.dateRegistered).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div className="flex items-center justify-end space-x-2">
+                          <button onClick={() => setViewId(client.id)} className="text-blue-600 hover:text-blue-800 p-2 rounded-lg hover:bg-blue-50">
+                            <FiEye className="h-4 w-4" />
+                          </button>
+                          <button onClick={() => setDeleteId(client.id)} className="text-red-600 hover:text-red-800 p-2 rounded-lg hover:bg-red-50">
+                            <FiTrash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
-          <div>
-            <nav className="relative z-0 inline-flex rounded-lg shadow-sm -space-x-px" aria-label="Pagination">
-              <button className="relative inline-flex items-center px-4 py-2 rounded-l-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
-                Previous
-              </button>
-              <button className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-primary-600 text-sm font-medium text-white">
-                1
-              </button>
-              <button className="relative inline-flex items-center px-4 py-2 rounded-r-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
-                Next
-              </button>
-            </nav>
-          </div>
-        </div>
+        )}
       </div>
-
-      {/* Add/Edit Client Modal */}
-      <Modal 
-        open={showAddModal} 
-        onClose={() => setShowAddModal(false)} 
-        title={editingClient ? 'Edit Client' : 'Add New Client'}
-      >
-        <form onSubmit={(e) => {
-          e.preventDefault();
-          console.log('Client saved:', formData);
-          setShowAddModal(false);
-        }} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
-            <input
-              type="text"
-              required
-              value={formData.name}
-              onChange={(e) => setFormData({...formData, name: e.target.value})}
-              className="block w-full px-3 py-2 rounded-md border border-gray-300"
-              placeholder="John Doe"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Email *</label>
-            <input
-              type="email"
-              required
-              value={formData.email}
-              onChange={(e) => setFormData({...formData, email: e.target.value})}
-              className="block w-full px-3 py-2 rounded-md border border-gray-300"
-              placeholder="john@example.com"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Phone *</label>
-            <input
-              type="tel"
-              required
-              value={formData.phone}
-              onChange={(e) => setFormData({...formData, phone: e.target.value})}
-              className="block w-full px-3 py-2 rounded-md border border-gray-300"
-              placeholder="+1 (555) 000-0000"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Company</label>
-            <input
-              type="text"
-              value={formData.company}
-              onChange={(e) => setFormData({...formData, company: e.target.value})}
-              className="block w-full px-3 py-2 rounded-md border border-gray-300"
-              placeholder="Acme Corp"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Address</label>
-            <textarea
-              rows={3}
-              value={formData.address}
-              onChange={(e) => setFormData({...formData, address: e.target.value})}
-              className="block w-full px-3 py-2 rounded-md border border-gray-300"
-              placeholder="123 Main St, City, State 12345"
-            />
-          </div>
-          <div className="flex justify-end space-x-3 pt-4">
-            <button
-              type="button"
-              onClick={() => setShowAddModal(false)}
-              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-            <button type="submit" className="btn-primary">
-              {editingClient ? 'Update Client' : 'Add Client'}
-            </button>
-          </div>
-        </form>
-      </Modal>
 
       {/* View Modal */}
       <Modal
@@ -357,46 +165,29 @@ const Clients: React.FC = () => {
       >
         {viewId && clientsList.find(c => c.id === viewId) && (() => {
           const client = clientsList.find(c => c.id === viewId)!;
+          const fullName = [client.firstName, client.secondName].filter(Boolean).join(' ');
           return (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">Client Name</label>
-                  <p className="text-base font-semibold text-gray-900">{client.name}</p>
+                  <p className="text-base font-semibold text-gray-900">{fullName}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Status</label>
-                  <span className={`inline-block text-sm px-3 py-1 rounded-full font-semibold ${getStatusColor(client.status)}`}>
-                    {client.status}
-                  </span>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">Client ID</label>
+                  <p className="text-sm text-gray-900 font-mono">{client.id}</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">Email</label>
-                  <p className="text-base text-gray-900">{client.email}</p>
+                  <p className="text-base text-gray-900">{client.email || 'N/A'}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Phone</label>
-                  <p className="text-base text-gray-900">{client.phone}</p>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">Username</label>
+                  <p className="text-base text-gray-900">{client.userName || 'N/A'}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Company</label>
-                  <p className="text-base text-gray-900">{client.company}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Total Bookings</label>
-                  <p className="text-base text-gray-900">{client.totalBookings}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Total Spent</label>
-                  <p className="text-lg font-bold text-gray-900">{client.totalSpent}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Last Booking</label>
-                  <p className="text-base text-gray-900">{client.lastBooking}</p>
-                </div>
-                <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Address</label>
-                  <p className="text-base text-gray-900">{client.address}</p>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">Date Registered</label>
+                  <p className="text-base text-gray-900">{new Date(client.dateRegistered).toLocaleString()}</p>
                 </div>
               </div>
               <div className="flex justify-end pt-4">

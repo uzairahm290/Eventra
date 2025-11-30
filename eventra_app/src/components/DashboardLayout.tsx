@@ -28,7 +28,7 @@ const renderAvatar = (user: { firstName?: string; lastName?: string; profileImag
   }
 
   return (
-    <div className={`${sizeClasses} rounded-full bg-gradient-to-r from-primary-600 to-cyan-600 flex items-center justify-center`}>
+    <div className={`${sizeClasses} rounded-full bg-linear-to-r from-primary-600 to-cyan-600 flex items-center justify-center`}>
       <span className={`text-white font-semibold ${textSizeClasses}`}>
         {user?.firstName?.charAt(0)}{user?.lastName?.charAt(0)}
       </span>
@@ -70,7 +70,7 @@ const DashboardLayout: React.FC = () => {
         {/* Logo */}
         <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200">
           <div className="flex items-center space-x-3">
-            <div className="bg-gradient-to-r from-primary-600 to-cyan-600 p-2 rounded-lg">
+            <div className="bg-linear-to-r from-primary-600 to-cyan-600 p-2 rounded-lg">
               <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
               </svg>
@@ -114,7 +114,7 @@ const DashboardLayout: React.FC = () => {
         {/* User Profile Section */}
         <div className="border-t border-gray-200 p-4">
           <div className="flex items-center space-x-3 px-4 py-3 rounded-lg bg-gray-50">
-            <div className="flex-shrink-0">
+            <div className="shrink-0">
               {renderAvatar(user, 'large')}
             </div>
             <div className="flex-1 min-w-0">

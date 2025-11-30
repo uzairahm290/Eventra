@@ -40,6 +40,12 @@ class ApiService {
     this.token = localStorage.getItem('token');
   }
 
+  private ensureOnline() {
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      throw new Error('You appear to be offline. Please check your network connection.');
+    }
+  }
+
   private getHeaders(): HeadersInit {
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
@@ -113,8 +119,21 @@ class ApiService {
     this.token = null;
   }
 
+  private async parseJsonSafe(response: Response) {
+    if (response.status === 204) return undefined;
+    const text = await response.text();
+    if (!text) return undefined;
+    try {
+      return JSON.parse(text);
+    } catch {
+      // Fallback for non-JSON responses
+      return text;
+    }
+  }
+
   // Generic GET request
   async get(endpoint: string) {
+    this.ensureOnline();
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'GET',
       headers: this.getHeaders(),
@@ -124,11 +143,12 @@ class ApiService {
       throw new Error(`API Error: ${response.statusText}`);
     }
 
-    return await response.json();
+    return await this.parseJsonSafe(response);
   }
 
   // Generic POST request
   async post(endpoint: string, data?: unknown) {
+    this.ensureOnline();
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'POST',
       headers: this.getHeaders(),
@@ -139,11 +159,12 @@ class ApiService {
       throw new Error(`API Error: ${response.statusText}`);
     }
 
-    return await response.json();
+    return await this.parseJsonSafe(response);
   }
 
   // Generic PUT request
   async put(endpoint: string, data?: unknown) {
+    this.ensureOnline();
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'PUT',
       headers: this.getHeaders(),
@@ -154,11 +175,12 @@ class ApiService {
       throw new Error(`API Error: ${response.statusText}`);
     }
 
-    return await response.json();
+    return await this.parseJsonSafe(response);
   }
 
   // Generic DELETE request
   async delete(endpoint: string) {
+    this.ensureOnline();
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'DELETE',
       headers: this.getHeaders(),
@@ -168,7 +190,7 @@ class ApiService {
       throw new Error(`API Error: ${response.statusText}`);
     }
 
-    return await response.json();
+    return await this.parseJsonSafe(response);
   }
 }
 

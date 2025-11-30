@@ -80,23 +80,28 @@ export interface UpdateEventRequest extends CreateEventRequest {
 
 class EventService {
   async getAllEvents(): Promise<Event[]> {
-    return await apiService.get('/Event');
+    const data = await apiService.get('/Events');
+    return Array.isArray(data) ? data.map(this.mapFromDto) : [];
   }
 
   async getEventById(id: number): Promise<Event> {
-    return await apiService.get(`/Event/${id}`);
+    const dto = await apiService.get(`/Events/${id}`);
+    return this.mapFromDto(dto);
   }
 
   async getUpcomingEvents(): Promise<Event[]> {
-    return await apiService.get('/Event/upcoming');
+    const data = await apiService.get('/Events?upcoming=true');
+    return Array.isArray(data) ? data.map(this.mapFromDto) : [];
   }
 
   async getPublicEvents(): Promise<Event[]> {
-    return await apiService.get('/Event/public');
+    const data = await apiService.get(`/Events?status=${EventStatus.Published}`);
+    return Array.isArray(data) ? data.map(this.mapFromDto) : [];
   }
 
   async getEventsByCategory(category: EventCategory): Promise<Event[]> {
-    return await apiService.get(`/Event/category/${category}`);
+    const data = await apiService.get(`/Events?category=${category}`);
+    return Array.isArray(data) ? data.map(this.mapFromDto) : [];
   }
 
   async searchEvents(query: string): Promise<Event[]> {
@@ -104,16 +109,53 @@ class EventService {
   }
 
   async createEvent(eventData: CreateEventRequest): Promise<Event> {
-    return await apiService.post('/Event', eventData);
+    const dto = await apiService.post('/Events', eventData);
+    return this.mapFromDto(dto);
   }
 
   async updateEvent(eventData: UpdateEventRequest): Promise<Event> {
-    return await apiService.put(`/Event/${eventData.id}`, eventData);
+    const dto = await apiService.put(`/Events/${eventData.id}`, eventData);
+    return this.mapFromDto(dto);
   }
 
   async deleteEvent(id: number): Promise<void> {
-    return await apiService.delete(`/Event/${id}`);
+    return await apiService.delete(`/Events/${id}`);
   }
+
+  private mapFromDto = (dto: any): Event => {
+    // Map category/status strings to numeric enum values if needed
+    const mapEnum = (obj: Record<string, number>, value: unknown, fallback: number) => {
+      if (typeof value === 'number') return value;
+      if (typeof value === 'string' && value in obj) return obj[value as keyof typeof obj];
+      return fallback;
+    };
+
+    return {
+      id: dto.id,
+      title: dto.title,
+      date: typeof dto.date === 'string' ? dto.date : new Date(dto.date).toISOString(),
+      endDate: dto.endDate ? (typeof dto.endDate === 'string' ? dto.endDate : new Date(dto.endDate).toISOString()) : undefined,
+      location: dto.location,
+      description: dto.description,
+      maxAttendees: dto.maxAttendees,
+      currentAttendees: dto.currentAttendees ?? 0,
+      category: mapEnum(EventCategory as unknown as Record<string, number>, dto.category, EventCategory.Other) as EventCategory,
+      status: mapEnum(EventStatus as unknown as Record<string, number>, dto.status, EventStatus.Draft) as EventStatus,
+      venueId: dto.venueId ?? undefined,
+      imageUrl: dto.imageUrl ?? undefined,
+      ticketPrice: dto.ticketPrice ?? undefined,
+      isFree: !!dto.isFree,
+      requiresApproval: !!dto.requiresApproval,
+      isPublic: !!dto.isPublic,
+      organizerName: dto.organizerName ?? undefined,
+      organizerEmail: dto.organizerEmail ?? undefined,
+      organizerPhone: dto.organizerPhone ?? undefined,
+      createdBy: dto.createdBy ?? '',
+      createdAt: typeof dto.createdAt === 'string' ? dto.createdAt : (dto.createdAt ? new Date(dto.createdAt).toISOString() : new Date().toISOString()),
+      updatedAt: dto.updatedAt ? (typeof dto.updatedAt === 'string' ? dto.updatedAt : new Date(dto.updatedAt).toISOString()) : undefined,
+      updatedBy: dto.updatedBy ?? undefined,
+    };
+  };
 
   getCategoryName(category: EventCategory): string {
     const names: Record<number, string> = {

@@ -84,7 +84,7 @@ namespace eventra_api.Controllers
         }
 
         // POST: api/Venues
-        [Authorize(Roles = "Admin")]
+        [Authorize]
         [HttpPost]
         public async Task<ActionResult<VenueDto>> CreateVenue(CreateVenueDto createDto)
         {
@@ -128,7 +128,7 @@ namespace eventra_api.Controllers
         }
 
         // PUT: api/Venues/5
-        [Authorize(Roles = "Admin")]
+        [Authorize]
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateVenue(int id, CreateVenueDto updateDto)
         {
@@ -168,7 +168,7 @@ namespace eventra_api.Controllers
         }
 
         // DELETE: api/Venues/5
-        [Authorize(Roles = "Admin")]
+        [Authorize]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteVenue(int id)
         {

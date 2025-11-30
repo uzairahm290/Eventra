@@ -5,3 +5,4 @@ export * from './venueService';
 export * from './bookingService';
 export * from './menuService';
 export * from './notificationService';
+export * from './clientService';
