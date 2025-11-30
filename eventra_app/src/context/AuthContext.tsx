@@ -8,6 +8,7 @@ interface User {
   firstName: string;
   lastName: string;
   profileImageBase64?: string;
+  role?: string;
 }
 
 interface AuthContextType {
@@ -73,6 +74,7 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
         firstName: response.user.firstName,
         lastName: response.user.lastName,
         profileImageBase64: response.user.profileImageBase64,
+        role: response.user.role,
       };
 
       setUser(userData);
@@ -118,6 +120,7 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
         firstName: response.user.firstName,
         lastName: response.user.lastName,
         profileImageBase64: response.user.profileImageBase64,
+        role: response.user.role,
       };
 
       setUser(user);

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Linq;
 using System.ComponentModel.DataAnnotations; // Required for DTOs
 using System.Collections.Generic;
+using System.Net;
 
 namespace eventra_api.Controllers
 {
@@ -16,16 +17,19 @@ namespace eventra_api.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly TokenService _tokenService;
+        private readonly IEmailService _emailService;
 
         // Dependency Injection: Gets the necessary Identity and Token services
         public AuthController(
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            TokenService tokenService)
+            TokenService tokenService,
+            IEmailService emailService)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _tokenService = tokenService;
+            _emailService = emailService;
         }
 
         // ------------------------------------------------------------------
@@ -64,6 +68,9 @@ namespace eventra_api.Controllers
 
             if (result.Succeeded)
             {
+                // Assign default User role
+                await _userManager.AddToRoleAsync(user, "User");
+                var roles = await _userManager.GetRolesAsync(user);
                 var token = _tokenService.CreateToken(user);
 
                 return Ok(new
@@ -78,7 +85,8 @@ namespace eventra_api.Controllers
                         // Use the actual ApplicationUser property name (LastName)
                         lastName = user.SecondName,
                         dateRegistered = user.DateRegistered,
-                        profileImageBase64 = user.ProfileImageBase64
+                        profileImageBase64 = user.ProfileImageBase64,
+                        role = roles.FirstOrDefault() ?? "User"
                     }
                 });
             }
@@ -93,7 +101,7 @@ namespace eventra_api.Controllers
         // Uses the new LoginDto
         public async Task<IActionResult> Login([FromBody] LoginDto model)
         {
-            ApplicationUser user = null;
+            ApplicationUser? user = null;
 
             // 1. Determine login identifier (UserMail or UserName)
             if (!string.IsNullOrEmpty(model.UserMail))
@@ -114,11 +122,18 @@ namespace eventra_api.Controllers
                 return Unauthorized(new { message = "Invalid credentials." }); // HTTP 401
             }
 
+            // Block login for users who are not yet approved by admin
+            if (!user.IsApproved)
+            {
+                return StatusCode(403, new { message = "Your account is awaiting admin approval." });
+            }
+
             // 2. Check password against the user found by identifier
             var result = await _signInManager.CheckPasswordSignInAsync(user, model.Password, false);
 
             if (result.Succeeded)
             {
+                var roles = await _userManager.GetRolesAsync(user);
                 var token = _tokenService.CreateToken(user);
 
                 return Ok(new
@@ -133,7 +148,8 @@ namespace eventra_api.Controllers
                         // Use the actual ApplicationUser property name (LastName)
                         lastName = user.SecondName,
                         dateRegistered = user.DateRegistered,
-                        profileImageBase64 = user.ProfileImageBase64
+                        profileImageBase64 = user.ProfileImageBase64,
+                        role = roles.FirstOrDefault() ?? "User"
                     }
                 });
             }
@@ -163,7 +179,8 @@ namespace eventra_api.Controllers
                 lastName = u.SecondName,
                 dateRegistered = u.DateRegistered,
                 userName = u.UserName,
-                isApproved = u.IsApproved
+                isApproved = u.IsApproved,
+                role = _userManager.GetRolesAsync(u).Result.FirstOrDefault() ?? "User"
             }).ToList();
 
             return Ok(new { message = "Users retrieved successfully!", users = userList });
@@ -183,15 +200,19 @@ namespace eventra_api.Controllers
             }
 
             var token = await _userManager.GeneratePasswordResetTokenAsync(user);
-            // In production, send this token via email. For now, return it (dev only)
-            // TODO: Integrate email service to send reset link
-            
-            return Ok(new { 
-                message = "If an account with that email exists, a reset link has been sent.",
-                // REMOVE THIS IN PRODUCTION - only for development
-                resetToken = token,
-                userId = user.Id
-            });
+            // Build reset link (frontend route expected to handle token parameters)
+            var frontendBase = Request.Headers.ContainsKey("Origin") ? Request.Headers["Origin"].ToString() : "http://localhost:5173";
+            var resetUrl = $"{frontendBase}/reset-password?userId={WebUtility.UrlEncode(user.Id)}&token={WebUtility.UrlEncode(token)}";
+
+            await _emailService.SendEmailAsync(user.Email, "Reset your Eventra password",
+                $"<p>Hello {WebUtility.HtmlEncode(user.FirstName ?? user.UserName)},</p>" +
+                $"<p>We received a request to reset your password. Click the button below to proceed:</p>" +
+                $"<p><a href='{resetUrl}' style='display:inline-block;padding:10px 16px;background:#2563eb;color:#fff;text-decoration:none;border-radius:8px'>Reset Password</a></p>" +
+                $"<p>If you didn’t request this, you can safely ignore this email.</p>"
+            );
+
+            // Return generic success without exposing token
+            return Ok(new { message = "If an account with that email exists, a reset link has been sent." });
         }
 
         // ------------------------------------------------------------------

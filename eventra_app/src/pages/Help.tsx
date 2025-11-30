@@ -62,7 +62,7 @@ const Help: React.FC = () => {
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
                     transition={{ delay: 0.2, type: 'spring' }}
-                    className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-primary-600 to-cyan-600 rounded-full mb-4"
+                    className="inline-flex items-center justify-center w-16 h-16 bg-linear-to-r from-primary-600 to-cyan-600 rounded-full mb-4"
                 >
                     <FiHelpCircle className="w-8 h-8 text-white" />
                 </motion.div>
@@ -147,9 +147,9 @@ const Help: React.FC = () => {
                             >
                                 <span className="font-medium text-gray-900">{faq.question}</span>
                                 {openFAQ === index ? (
-                                    <FiChevronUp className="w-5 h-5 text-gray-500 flex-shrink-0" />
+                                    <FiChevronUp className="w-5 h-5 text-gray-500 shrink-0" />
                                 ) : (
-                                    <FiChevronDown className="w-5 h-5 text-gray-500 flex-shrink-0" />
+                                    <FiChevronDown className="w-5 h-5 text-gray-500 shrink-0" />
                                 )}
                             </button>
                             {openFAQ === index && (
@@ -173,7 +173,7 @@ const Help: React.FC = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.6 }}
-                className="bg-gradient-to-r from-primary-600 to-cyan-600 rounded-xl p-8 text-white text-center"
+                className="bg-linear-to-r from-primary-600 to-cyan-600 rounded-xl p-8 text-white text-center"
             >
                 <h3 className="text-2xl font-bold mb-3">Need More Help?</h3>
                 <p className="mb-6 opacity-90">

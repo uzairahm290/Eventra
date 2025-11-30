@@ -53,7 +53,8 @@ namespace eventra_api.Data
                     FirstName = "Dev",
                     SecondName = "Admin",
                     DateRegistered = DateTime.UtcNow,
-                    IsActive = true
+                    IsActive = true,
+                    IsApproved = true
                 };
                 await userManager.CreateAsync(admin, "Dev@12345!");
             }

@@ -37,6 +37,7 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 
 // 2. NEW: Register the Token Service
 builder.Services.AddScoped<TokenService>(); // <-- REGISTER TOKEN SERVICE
+builder.Services.AddScoped<IEmailService, EmailService>(); // <-- NEW: Register EmailService
 
 // 3. NEW: Add and Configure JWT Bearer Authentication
 builder.Services.AddAuthentication(options =>

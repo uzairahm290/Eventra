@@ -22,6 +22,7 @@ export interface AuthResponse {
     lastName: string;
     dateRegistered: string;
     profileImageBase64?: string;
+    role?: string;
   };
 }
 
@@ -74,8 +75,15 @@ class ApiService {
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || 'Login failed');
+      // Handle unapproved users (HTTP 403 from backend)
+      if (response.status === 403) {
+        const err = await this.parseJsonSafe(response);
+        const msg = (typeof err === 'object' && err && (err as any).message) ? (err as any).message : 'Your account is awaiting admin approval.';
+        throw new Error(msg);
+      }
+      const error = await this.parseJsonSafe(response);
+      const msg = (typeof error === 'object' && error && (error as any).message) ? (error as any).message : 'Login failed';
+      throw new Error(msg);
     }
 
     const data: AuthResponse = await response.json();
