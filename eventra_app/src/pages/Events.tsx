@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { FiPlus, FiSearch, FiFilter, FiCalendar, FiUsers, FiMapPin, FiEdit, FiTrash2, FiEye } from 'react-icons/fi';
+import { toast } from 'react-toastify';
 import Modal from '../components/Modal';
 import { eventService, EventCategory, EventStatus } from '../services';
 import type { Event } from '../services';
@@ -37,6 +38,7 @@ const Events: React.FC = () => {
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Failed to load events';
       setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -110,10 +112,12 @@ const Events: React.FC = () => {
       
       setOpenEditId(null);
       await loadEvents();
+      toast.success(openEditId === 'new' ? 'Event created successfully!' : 'Event updated successfully!');
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Failed to save event';
       console.error('Save error:', error);
       setError(msg);
+      toast.error(msg);
     }
   };
 
@@ -123,9 +127,11 @@ const Events: React.FC = () => {
         await eventService.deleteEvent(deleteId);
         await loadEvents();
         setDeleteId(null);
+        toast.success('Event deleted successfully!');
       } catch (error) {
+        const msg = error instanceof Error ? error.message : 'Failed to delete event';
         console.error('Failed to delete event:', error);
-        alert('Failed to delete event');
+        toast.error(msg);
       }
     }
   };

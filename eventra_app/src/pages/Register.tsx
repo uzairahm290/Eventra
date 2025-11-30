@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FiMail, FiLock, FiUser, FiEye, FiEyeOff } from 'react-icons/fi';
+import { toast } from 'react-toastify';
 import { useAuth } from '../context/AuthContext';
 import Modal from '../components/Modal';
 
@@ -25,17 +26,23 @@ const Register: React.FC = () => {
 
     // Validation
     if (!formData.firstName || !formData.lastName || !formData.email || !formData.password) {
-      setError('Please fill in all fields');
+      const msg = 'Please fill in all fields';
+      setError(msg);
+      toast.error(msg);
       return;
     }
 
     if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
+      const msg = 'Passwords do not match';
+      setError(msg);
+      toast.error(msg);
       return;
     }
 
     if (formData.password.length < 8) {
-      setError('Password must be at least 8 characters long');
+      const msg = 'Password must be at least 8 characters long';
+      setError(msg);
+      toast.error(msg);
       return;
     }
 
@@ -46,9 +53,12 @@ const Register: React.FC = () => {
         email: formData.email,
         password: formData.password,
       });
+      toast.success('Registration successful! Welcome to Eventra!');
       navigate('/dashboard');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Registration failed. Please try again.');
+      const msg = err instanceof Error ? err.message : 'Registration failed. Please try again.';
+      setError(msg);
+      toast.error(msg);
     }
   };
 

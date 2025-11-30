@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FiPlus, FiSearch, FiCalendar, FiMapPin, FiUser, FiEdit, FiTrash2, FiEye, FiCheckCircle } from 'react-icons/fi';
+import { toast } from 'react-toastify';
 import Modal from '../components/Modal';
 import { bookingService } from '../services/bookingService';
 import type { Booking } from '../services/bookingService';
@@ -34,6 +35,7 @@ const Bookings: React.FC = () => {
       setBookingsList(data);
     } catch (error) {
       console.error('Failed to load bookings:', error);
+      toast.error('Failed to load bookings');
     } finally {
       setLoading(false);
     }
@@ -43,8 +45,10 @@ const Bookings: React.FC = () => {
       try {
         await bookingService.deleteBooking(deleteId);
         await loadBookings();
+        toast.success('Booking deleted successfully!');
       } catch (error) {
         console.error('Failed to delete booking:', error);
+        toast.error('Failed to delete booking');
       } finally {
         setDeleteId(null);
       }

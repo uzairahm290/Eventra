@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FiUser, FiMail, FiHash, FiSave, FiLoader } from 'react-icons/fi';
+import { toast } from 'react-toastify';
 import { useAuth } from '../context/AuthContext';
 import { apiService } from '../services/api';
 import AvatarUpload from '../components/AvatarUpload';
@@ -28,10 +29,9 @@ const Profile: React.FC = () => {
         setProfileImageBase64(response.profileImageBase64 || user?.profileImageBase64 || '');
       } catch (error) {
         console.error('Failed to load profile:', error);
-        setMessage({ 
-          type: 'error', 
-          text: error instanceof Error ? error.message : 'Failed to load profile' 
-        });
+        const msg = error instanceof Error ? error.message : 'Failed to load profile';
+        setMessage({ type: 'error', text: msg });
+        toast.error(msg);
       } finally {
         setLoading(false);
       }
@@ -56,16 +56,17 @@ const Profile: React.FC = () => {
       };
 
       const response = await apiService.put('/Profile', profileData);
-      setMessage({ type: 'success', text: response.message || 'Profile updated successfully!' });
+      const successMsg = response.message || 'Profile updated successfully!';
+      setMessage({ type: 'success', text: successMsg });
+      toast.success(successMsg);
       
       // Refresh the auth context with updated profile data
       await refreshProfile();
     } catch (error) {
       console.error('Failed to save profile:', error);
-      setMessage({ 
-        type: 'error', 
-        text: error instanceof Error ? error.message : 'Failed to save profile' 
-      });
+      const errorMsg = error instanceof Error ? error.message : 'Failed to save profile';
+      setMessage({ type: 'error', text: errorMsg });
+      toast.error(errorMsg);
     } finally {
       setSaving(false);
     }
