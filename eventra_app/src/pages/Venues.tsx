@@ -1,13 +1,27 @@
-import React, { useState } from 'react';
-import { FiPlus, FiSearch, FiMapPin, FiUsers, FiDollarSign, FiEdit, FiTrash2, FiEye, FiStar } from 'react-icons/fi';
+import React, { useEffect, useMemo, useState } from 'react';
+import { FiPlus, FiSearch, FiMapPin, FiUsers, FiDollarSign, FiEdit, FiTrash2, FiEye } from 'react-icons/fi';
 import Modal from '../components/Modal';
+import { venueService } from '../services';
+import type { Venue } from '../services';
 
 const Venues: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
-  const [editingVenue, setEditingVenue] = useState<typeof formData | null>(null);
+  const [editingVenue, setEditingVenue] = useState<null | {
+    name: string;
+    address: string;
+    capacity: string;
+    pricePerHour: string;
+    amenities: string;
+    image: string;
+  }>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [viewId, setViewId] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [venuesList, setVenuesList] = useState<Venue[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+
   const [formData, setFormData] = useState({
     name: '',
     address: '',
@@ -17,78 +31,57 @@ const Venues: React.FC = () => {
     image: '',
   });
 
-  const [venuesList, setVenuesList] = useState([
-    {
-      id: 1,
-      name: 'Grand Ballroom',
-      address: '123 Main St, Downtown',
-      capacity: 300,
-      pricePerHour: 500,
-      rating: 4.8,
-      amenities: ['WiFi', 'Catering', 'Parking', 'AV Equipment'],
-      image: 'https://images.unsplash.com/photo-1519167758481-83f29da8c37f?w=400',
-      status: 'Available',
-      bookings: 12,
-    },
-    {
-      id: 2,
-      name: 'Garden Pavilion',
-      address: '456 Park Ave, Riverside',
-      capacity: 150,
-      pricePerHour: 350,
-      rating: 4.9,
-      amenities: ['Garden', 'WiFi', 'Parking'],
-      image: 'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=400',
-      status: 'Available',
-      bookings: 8,
-    },
-    {
-      id: 3,
-      name: 'Convention Center',
-      address: '789 Business Blvd, City Center',
-      capacity: 500,
-      pricePerHour: 800,
-      rating: 4.7,
-      amenities: ['WiFi', 'Catering', 'Parking', 'AV Equipment', 'Stage'],
-      image: 'https://images.unsplash.com/photo-1511578314322-379afb476865?w=400',
-      status: 'Available',
-      bookings: 15,
-    },
-    {
-      id: 4,
-      name: 'Rooftop Terrace',
-      address: '321 Sky Tower, Heights',
-      capacity: 100,
-      pricePerHour: 450,
-      rating: 4.6,
-      amenities: ['WiFi', 'Bar', 'City View'],
-      image: 'https://images.unsplash.com/photo-1478146896981-b80fe463b330?w=400',
-      status: 'Booked',
-      bookings: 6,
-    },
-  ]);
+  useEffect(() => {
+    loadVenues();
+  }, []);
 
-  const handleDelete = () => {
-    if (deleteId) {
-      setVenuesList(prev => prev.filter(v => v.id !== deleteId));
+  const loadVenues = async () => {
+    try {
+      setLoading(true);
+      const data = await venueService.getAllVenues();
+      setVenuesList(data);
+    } catch (error) {
+      console.error('Failed to load venues:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredVenues = useMemo(() => {
+    const term = searchTerm.toLowerCase();
+    return venuesList.filter(v =>
+      v.name.toLowerCase().includes(term) ||
+      v.address.toLowerCase().includes(term) ||
+      (v.city?.toLowerCase().includes(term) ?? false)
+    );
+  }, [venuesList, searchTerm]);
+
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    try {
+      await venueService.deleteVenue(deleteId);
+      await loadVenues();
+    } catch (error) {
+      console.error('Failed to delete venue:', error);
+    } finally {
       setDeleteId(null);
     }
   };
 
-  const handleEdit = (venue: { id: number; name: string; address: string; capacity: number; pricePerHour: number; amenities: string[]; rating: number; image: string; status: string; bookings: number }) => {
-    setEditingVenue({ ...venue, capacity: venue.capacity.toString(), pricePerHour: venue.pricePerHour.toString(), amenities: venue.amenities.join(', ') });
-    setFormData({
+  const handleEdit = (venue: Venue) => {
+    const mapped = {
       name: venue.name,
-      address: venue.address,
-      capacity: venue.capacity.toString(),
-      pricePerHour: venue.pricePerHour.toString(),
-      amenities: venue.amenities.join(', '),
-      image: venue.image,
-    });
+      address: [venue.address, venue.city, venue.state, venue.postalCode].filter(Boolean).join(', '),
+      capacity: String(venue.capacity),
+      pricePerHour: String(venue.pricePerHour ?? ''),
+      amenities: venue.description ?? '',
+      image: '',
+    };
+    setEditingVenue(mapped);
+    setFormData(mapped);
+    setEditingId(venue.id);
     setShowAddModal(true);
   };
-
-  const venues = venuesList;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -98,7 +91,7 @@ const Venues: React.FC = () => {
           <h1 className="text-3xl font-bold text-gray-900">Venues</h1>
           <p className="mt-2 text-gray-600">Manage your event venues and locations</p>
         </div>
-        <button 
+        <button
           onClick={() => {
             setEditingVenue(null);
             setFormData({ name: '', address: '', capacity: '', pricePerHour: '', amenities: '', image: '' });
@@ -129,102 +122,117 @@ const Venues: React.FC = () => {
 
       {/* Venues Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {venues.map((venue) => (
-          <div key={venue.id} className="card overflow-hidden group">
-            {/* Venue Image */}
-            <div className="relative h-48 overflow-hidden">
-              <img
-                src={venue.image}
-                alt={venue.name}
-                className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-300"
-              />
-              <div className="absolute top-3 right-3">
-                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                  venue.status === 'Available' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
-                }`}>
-                  {venue.status}
-                </span>
+        {loading ? (
+          <div className="col-span-full text-center py-12 text-gray-500">Loading venues...</div>
+        ) : filteredVenues.length === 0 ? (
+          <div className="col-span-full text-center py-12 text-gray-500">No venues found</div>
+        ) : (
+          filteredVenues.map((venue) => (
+            <div key={venue.id} className="card overflow-hidden group">
+              {/* Venue Header */}
+              <div className="relative h-48 overflow-hidden bg-linear-to-br from-primary-100 to-cyan-100 flex items-center justify-center">
+                <FiMapPin className="h-16 w-16 text-primary-300" />
+                <div className="absolute top-3 right-3">
+                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${venue.isActive ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
+                    {venue.isActive ? 'Available' : 'Inactive'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Venue Details */}
+              <div className="p-6">
+                <div className="flex items-start justify-between mb-2">
+                  <h3 className="text-lg font-bold text-gray-900">{venue.name}</h3>
+                </div>
+
+                <div className="flex items-center text-sm text-gray-600 mb-4">
+                  <FiMapPin className="mr-2 h-4 w-4" />
+                  {[venue.address, venue.city, venue.state].filter(Boolean).join(', ')}
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div className="flex items-center text-sm">
+                    <FiUsers className="mr-2 h-4 w-4 text-gray-400" />
+                    <span className="text-gray-600">Cap:</span>
+                    <span className="ml-1 font-medium text-gray-900">{venue.capacity}</span>
+                  </div>
+                  <div className="flex items-center text-sm">
+                    <FiDollarSign className="mr-2 h-4 w-4 text-gray-400" />
+                    <span className="font-medium text-gray-900">${venue.pricePerHour ?? 0}/hr</span>
+                  </div>
+                </div>
+
+                {venue.description && (
+                  <div className="mb-4 text-sm text-gray-600 line-clamp-2">{venue.description}</div>
+                )}
+
+                {/* Actions */}
+                <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+                  <button onClick={() => setViewId(venue.id)} className="flex items-center text-sm text-blue-600 hover:text-blue-800">
+                    <FiEye className="mr-1 h-4 w-4" />
+                    View
+                  </button>
+                  <button onClick={() => handleEdit(venue)} className="flex items-center text-sm text-green-600 hover:text-green-800">
+                    <FiEdit className="mr-1 h-4 w-4" />
+                    Edit
+                  </button>
+                  <button onClick={() => setDeleteId(venue.id)} className="flex items-center text-sm text-red-600 hover:text-red-800">
+                    <FiTrash2 className="mr-1 h-4 w-4" />
+                    Delete
+                  </button>
+                </div>
               </div>
             </div>
-
-            {/* Venue Details */}
-            <div className="p-6">
-              <div className="flex items-start justify-between mb-2">
-                <h3 className="text-lg font-bold text-gray-900">{venue.name}</h3>
-                <div className="flex items-center">
-                  <FiStar className="h-4 w-4 text-yellow-400 fill-current" />
-                  <span className="ml-1 text-sm font-medium text-gray-900">{venue.rating}</span>
-                </div>
-              </div>
-
-              <div className="flex items-center text-sm text-gray-600 mb-4">
-                <FiMapPin className="mr-2 h-4 w-4" />
-                {venue.address}
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <div className="flex items-center text-sm">
-                  <FiUsers className="mr-2 h-4 w-4 text-gray-400" />
-                  <span className="text-gray-600">Cap:</span>
-                  <span className="ml-1 font-medium text-gray-900">{venue.capacity}</span>
-                </div>
-                <div className="flex items-center text-sm">
-                  <FiDollarSign className="mr-2 h-4 w-4 text-gray-400" />
-                  <span className="font-medium text-gray-900">${venue.pricePerHour}/hr</span>
-                </div>
-              </div>
-
-              {/* Amenities */}
-              <div className="mb-4">
-                <div className="flex flex-wrap gap-2">
-                  {venue.amenities.slice(0, 3).map((amenity, index) => (
-                    <span key={index} className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full">
-                      {amenity}
-                    </span>
-                  ))}
-                  {venue.amenities.length > 3 && (
-                    <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
-                      +{venue.amenities.length - 3} more
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              <div className="text-xs text-gray-500 mb-4">
-                {venue.bookings} bookings this month
-              </div>
-
-              {/* Actions */}
-              <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-                <button onClick={() => setViewId(venue.id)} className="flex items-center text-sm text-blue-600 hover:text-blue-800">
-                  <FiEye className="mr-1 h-4 w-4" />
-                  View
-                </button>
-                <button onClick={() => handleEdit(venue)} className="flex items-center text-sm text-green-600 hover:text-green-800">
-                  <FiEdit className="mr-1 h-4 w-4" />
-                  Edit
-                </button>
-                <button onClick={() => setDeleteId(venue.id)} className="flex items-center text-sm text-red-600 hover:text-red-800">
-                  <FiTrash2 className="mr-1 h-4 w-4" />
-                  Delete
-                </button>
-              </div>
-            </div>
-          </div>
-        ))}
+          ))
+        )}
       </div>
 
       {/* Add/Edit Venue Modal */}
-      <Modal 
-        open={showAddModal} 
-        onClose={() => setShowAddModal(false)} 
+      <Modal
+        open={showAddModal}
+        onClose={() => setShowAddModal(false)}
         title={editingVenue ? 'Edit Venue' : 'Add New Venue'}
       >
-        <form onSubmit={(e) => {
-          e.preventDefault();
-          console.log('Venue saved:', formData);
-          setShowAddModal(false);
-        }} className="space-y-4">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            const capacity = parseInt(formData.capacity || '0', 10);
+            const price = formData.pricePerHour ? parseFloat(formData.pricePerHour) : undefined;
+            if (!formData.name || !formData.address || !capacity) {
+              alert('Please fill in name, address and capacity');
+              return;
+            }
+            const payload = {
+              name: formData.name,
+              address: formData.address,
+              capacity,
+              description: formData.amenities || undefined,
+              pricePerHour: isNaN(Number(price)) ? undefined : price,
+              isActive: true,
+            } as const;
+            setSaving(true);
+            (async () => {
+              try {
+                if (editingId) {
+                  await venueService.updateVenue({ id: editingId, ...payload });
+                } else {
+                  await venueService.createVenue(payload);
+                }
+                await loadVenues();
+                setShowAddModal(false);
+                setEditingId(null);
+                setEditingVenue(null);
+                setFormData({ name: '', address: '', capacity: '', pricePerHour: '', amenities: '', image: '' });
+              } catch (err) {
+                const msg = err instanceof Error ? err.message : 'Failed to save venue';
+                alert(msg.includes('Forbidden') || msg.includes('401') ? 'Requires Admin role to create/update venues.' : `Failed to save venue: ${msg}`);
+              } finally {
+                setSaving(false);
+              }
+            })();
+          }}
+          className="space-y-4"
+        >
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Venue Name</label>
             <input
@@ -272,17 +280,17 @@ const Venues: React.FC = () => {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Amenities (comma-separated)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Notes (optional)</label>
             <input
               type="text"
               value={formData.amenities}
               onChange={(e) => setFormData({ ...formData, amenities: e.target.value })}
               className="block w-full px-3 py-2 rounded-md border border-gray-300"
-              placeholder="WiFi, Catering, Parking"
+              placeholder="Any additional details"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Image URL</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Image URL (optional)</label>
             <input
               type="url"
               value={formData.image}
@@ -299,29 +307,21 @@ const Venues: React.FC = () => {
             >
               Cancel
             </button>
-            <button
-              type="submit"
-              className="btn-primary"
-            >
-              {editingVenue ? 'Update Venue' : 'Add Venue'}
+            <button type="submit" className="btn-primary" disabled={saving}>
+              {saving ? 'Saving...' : editingVenue ? 'Update Venue' : 'Add Venue'}
             </button>
           </div>
         </form>
       </Modal>
 
       {/* View Modal */}
-      <Modal
-        open={viewId !== null}
-        onClose={() => setViewId(null)}
-        title="Venue Details"
-        maxWidthClass="max-w-2xl"
-      >
-        {viewId && venuesList.find(v => v.id === viewId) && (() => {
-          const venue = venuesList.find(v => v.id === viewId)!;
+      <Modal open={viewId !== null} onClose={() => setViewId(null)} title="Venue Details" maxWidthClass="max-w-2xl">
+        {viewId && venuesList.find((v) => v.id === viewId) && (() => {
+          const venue = venuesList.find((v) => v.id === viewId)!;
           return (
             <div className="space-y-4">
-              <div className="mb-4">
-                <img src={venue.image} alt={venue.name} className="w-full h-48 object-cover rounded-lg" />
+              <div className="w-full h-40 rounded-lg bg-linear-to-br from-primary-100 to-cyan-100 flex items-center justify-center">
+                <FiMapPin className="h-10 w-10 text-primary-300" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -330,15 +330,15 @@ const Venues: React.FC = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">Status</label>
-                  <span className={`inline-block text-sm px-3 py-1 rounded-full font-semibold ${
-                    venue.status === 'Available' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                  }`}>
-                    {venue.status}
+                  <span className={`inline-block text-sm px-3 py-1 rounded-full font-semibold ${venue.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                    {venue.isActive ? 'Available' : 'Inactive'}
                   </span>
                 </div>
                 <div className="col-span-2">
                   <label className="block text-sm font-medium text-gray-500 mb-1">Address</label>
-                  <p className="text-base text-gray-900">{venue.address}</p>
+                  <p className="text-base text-gray-900">
+                    {[venue.address, venue.city, venue.state, venue.postalCode].filter(Boolean).join(', ')}
+                  </p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">Capacity</label>
@@ -346,28 +346,19 @@ const Venues: React.FC = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">Price per Hour</label>
-                  <p className="text-lg font-bold text-gray-900">${venue.pricePerHour}</p>
+                  <p className="text-lg font-bold text-gray-900">${venue.pricePerHour ?? 0}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Rating</label>
-                  <p className="text-base text-gray-900 flex items-center">
-                    <FiStar className="h-4 w-4 text-yellow-400 fill-current mr-1" />
-                    {venue.rating}
-                  </p>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">Contact Phone</label>
+                  <p className="text-base text-gray-900">{venue.contactPhone || 'N/A'}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Bookings This Month</label>
-                  <p className="text-base text-gray-900">{venue.bookings}</p>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">Contact Email</label>
+                  <p className="text-base text-gray-900">{venue.contactEmail || 'N/A'}</p>
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Amenities</label>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {venue.amenities.map((amenity, index) => (
-                      <span key={index} className="px-3 py-1 bg-blue-50 text-blue-700 text-sm rounded-full">
-                        {amenity}
-                      </span>
-                    ))}
-                  </div>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">Description</label>
+                  <p className="text-sm text-gray-700 whitespace-pre-line">{venue.description || 'No description provided.'}</p>
                 </div>
               </div>
               <div className="flex justify-end pt-4">
@@ -381,25 +372,14 @@ const Venues: React.FC = () => {
       </Modal>
 
       {/* Delete Confirmation Modal */}
-      <Modal
-        open={deleteId !== null}
-        onClose={() => setDeleteId(null)}
-        title="Confirm Delete"
-        maxWidthClass="max-w-md"
-      >
+      <Modal open={deleteId !== null} onClose={() => setDeleteId(null)} title="Confirm Delete" maxWidthClass="max-w-md">
         <div className="space-y-4">
           <p className="text-gray-700">Are you sure you want to delete this venue? This action cannot be undone.</p>
           <div className="flex justify-end space-x-3 pt-2">
-            <button
-              onClick={() => setDeleteId(null)}
-              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-            >
+            <button onClick={() => setDeleteId(null)} className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
               Cancel
             </button>
-            <button
-              onClick={handleDelete}
-              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
-            >
+            <button onClick={handleDelete} className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">
               Delete
             </button>
           </div>
@@ -410,3 +390,4 @@ const Venues: React.FC = () => {
 };
 
 export default Venues;
+

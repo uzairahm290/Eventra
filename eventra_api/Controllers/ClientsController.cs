@@ -1,108 +1,165 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Authorization;
-using eventra_api.Models;
-using System.Threading.Tasks;
-using System.Linq;
 using Microsoft.EntityFrameworkCore;
-using System.Collections.Generic; // To use List<T>
+using eventra_api.Data;
+using eventra_api.Models;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using System;
 
 namespace eventra_api.Controllers
 {
-    // Restricting access to this entire controller to only Admins
-    // NOTE: This will require the 'Admin' role to exist in your database.
-    [Authorize(Roles = "Admin")]
-    [Route("api/[controller]")] // Base URL: /api/Clients
+    [Authorize]
+    [Route("api/[controller]")]
     [ApiController]
     public class ClientsController : ControllerBase
     {
-        private readonly UserManager<ApplicationUser> _userManager;
+        private readonly AppDbContext _context;
 
-        // Dependency Injection: Gets the UserManager service
-        public ClientsController(UserManager<ApplicationUser> userManager)
+        public ClientsController(AppDbContext context)
         {
-            _userManager = userManager;
+            _context = context;
         }
 
-        // ------------------------------------------------------------------
-        // GET ALL CLIENTS (GET /api/Clients) - Only accessible by Admin
-        // ------------------------------------------------------------------
+        // GET: api/Clients
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<ClientResponseDto>>> GetAllClients()
+        public async Task<ActionResult<IEnumerable<ClientDto>>> GetAllClients()
         {
-            var allUsers = await _userManager.Users.ToListAsync();
-            var clientUsers = new List<ClientResponseDto>();
-
-            // Iterate through all users to check if they have the 'Client' role
-            foreach (var user in allUsers)
-            {
-                // NOTE: The 'Client' role must be created and assigned for this filter to work.
-                // We are assuming a "Client" role for all non-Admins/Managers.
-                if (await _userManager.IsInRoleAsync(user, "Client"))
+            var clients = await _context.Clients
+                .Where(c => c.IsActive)
+                .OrderByDescending(c => c.DateRegistered)
+                .Select(c => new ClientDto
                 {
-                    clientUsers.Add(new ClientResponseDto
-                    {
-                        Id = user.Id,
-                        FirstName = user.FirstName,
-                        SecondName = user.SecondName, // MATCHES CONVENTION
-                        Email = user.Email,
-                        UserName = user.UserName,
-                        DateRegistered = user.DateRegistered
-                    });
-                }
-            }
+                    Id = c.Id,
+                    FirstName = c.FirstName,
+                    SecondName = c.SecondName,
+                    Email = c.Email,
+                    Phone = c.Phone,
+                    Company = c.Company,
+                    Address = c.Address,
+                    DateRegistered = c.DateRegistered,
+                    IsActive = c.IsActive
+                })
+                .ToListAsync();
 
-            return Ok(clientUsers);
+            return Ok(clients);
         }
 
-        // ------------------------------------------------------------------
-        // GET SINGLE CLIENT (GET /api/Clients/{id}) - Only accessible by Admin
-        // ------------------------------------------------------------------
+        // GET: api/Clients/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<ClientResponseDto>> GetClient(string id)
+        public async Task<ActionResult<ClientDto>> GetClient(int id)
         {
-            var user = await _userManager.FindByIdAsync(id);
+            var client = await _context.Clients.FindAsync(id);
 
-            // Check if user exists AND has the "Client" role
-            if (user == null || !await _userManager.IsInRoleAsync(user, "Client"))
-            {
-                return NotFound(new { message = "Client not found or user is not designated as a Client." });
-            }
-
-            return Ok(new ClientResponseDto
-            {
-                Id = user.Id,
-                FirstName = user.FirstName,
-                SecondName = user.SecondName, // MATCHES CONVENTION
-                Email = user.Email,
-                UserName = user.UserName,
-                DateRegistered = user.DateRegistered
-            });
-        }
-
-        // ------------------------------------------------------------------
-        // DELETE CLIENT (DELETE /api/Clients/{id}) - Only accessible by Admin
-        // ------------------------------------------------------------------
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteClient(string id)
-        {
-            var user = await _userManager.FindByIdAsync(id);
-
-            // Check if user exists AND has the "Client" role
-            if (user == null || !await _userManager.IsInRoleAsync(user, "Client"))
+            if (client == null)
             {
                 return NotFound(new { message = "Client not found." });
             }
 
-            // Remove user from database
-            var result = await _userManager.DeleteAsync(user);
-
-            if (result.Succeeded)
+            var clientDto = new ClientDto
             {
-                return NoContent(); // HTTP 204
+                Id = client.Id,
+                FirstName = client.FirstName,
+                SecondName = client.SecondName,
+                Email = client.Email,
+                Phone = client.Phone,
+                Company = client.Company,
+                Address = client.Address,
+                DateRegistered = client.DateRegistered,
+                IsActive = client.IsActive
+            };
+
+            return Ok(clientDto);
+        }
+
+        // POST: api/Clients
+        [HttpPost]
+        public async Task<ActionResult<ClientDto>> CreateClient(CreateClientDto createDto)
+        {
+            // Check if email already exists
+            if (await _context.Clients.AnyAsync(c => c.Email == createDto.Email))
+            {
+                return BadRequest(new { message = "A client with this email already exists." });
             }
 
-            return BadRequest(new { message = "Failed to delete client.", errors = result.Errors });
+            var client = new Client
+            {
+                FirstName = createDto.FirstName,
+                SecondName = createDto.SecondName,
+                Email = createDto.Email,
+                Phone = createDto.Phone,
+                Company = createDto.Company,
+                Address = createDto.Address,
+                DateRegistered = DateTime.UtcNow,
+                IsActive = true
+            };
+
+            _context.Clients.Add(client);
+            await _context.SaveChangesAsync();
+
+            var clientDto = new ClientDto
+            {
+                Id = client.Id,
+                FirstName = client.FirstName,
+                SecondName = client.SecondName,
+                Email = client.Email,
+                Phone = client.Phone,
+                Company = client.Company,
+                Address = client.Address,
+                DateRegistered = client.DateRegistered,
+                IsActive = client.IsActive
+            };
+
+            return CreatedAtAction(nameof(GetClient), new { id = client.Id }, clientDto);
+        }
+
+        // PUT: api/Clients/5
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateClient(int id, UpdateClientDto updateDto)
+        {
+            var client = await _context.Clients.FindAsync(id);
+
+            if (client == null)
+            {
+                return NotFound(new { message = "Client not found." });
+            }
+
+            // Check if email is being changed and if it already exists for another client
+            if (client.Email != updateDto.Email && 
+                await _context.Clients.AnyAsync(c => c.Email == updateDto.Email && c.Id != id))
+            {
+                return BadRequest(new { message = "A client with this email already exists." });
+            }
+
+            client.FirstName = updateDto.FirstName;
+            client.SecondName = updateDto.SecondName;
+            client.Email = updateDto.Email;
+            client.Phone = updateDto.Phone;
+            client.Company = updateDto.Company;
+            client.Address = updateDto.Address;
+            client.IsActive = updateDto.IsActive;
+
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+        }
+
+        // DELETE: api/Clients/5
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteClient(int id)
+        {
+            var client = await _context.Clients.FindAsync(id);
+
+            if (client == null)
+            {
+                return NotFound(new { message = "Client not found." });
+            }
+
+            _context.Clients.Remove(client);
+            await _context.SaveChangesAsync();
+
+            return NoContent();
         }
     }
 }

@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FiPlus, FiSearch, FiCalendar, FiMapPin, FiUser, FiEdit, FiTrash2, FiEye, FiCheckCircle } from 'react-icons/fi';
 import Modal from '../components/Modal';
+import { bookingService } from '../services/bookingService';
+import type { Booking } from '../services/bookingService';
 
 const Bookings: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -9,6 +11,8 @@ const Bookings: React.FC = () => {
   const [editingBooking, setEditingBooking] = useState<typeof formData | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [viewId, setViewId] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [bookingsList, setBookingsList] = useState<Booking[]>([]);
   const [formData, setFormData] = useState({
     client: '',
     venue: '',
@@ -19,130 +23,81 @@ const Bookings: React.FC = () => {
     totalAmount: '',
   });
 
-  const [bookingsList, setBookingsList] = useState([
-    {
-      id: 1,
-      bookingId: 'BK-2025-001',
-      client: 'Sarah Anderson',
-      venue: 'Grand Ballroom',
-      event: 'Corporate Gala 2025',
-      date: '2025-11-25',
-      time: '18:00 - 23:00',
-      totalAmount: '$15,000',
-      depositPaid: '$5,000',
-      remaining: '$10,000',
-      status: 'Confirmed',
-      paymentStatus: 'Partial',
-    },
-    {
-      id: 2,
-      bookingId: 'BK-2025-002',
-      client: 'Michael Chen',
-      venue: 'Garden Pavilion',
-      event: 'Johnson Wedding',
-      date: '2025-12-05',
-      time: '14:00 - 22:00',
-      totalAmount: '$12,000',
-      depositPaid: '$12,000',
-      remaining: '$0',
-      status: 'Confirmed',
-      paymentStatus: 'Paid',
-    },
-    {
-      id: 3,
-      bookingId: 'BK-2025-003',
-      client: 'Emily Rodriguez',
-      venue: 'Convention Center',
-      event: 'Tech Conference 2025',
-      date: '2025-12-12',
-      time: '09:00 - 18:00',
-      totalAmount: '$35,000',
-      depositPaid: '$0',
-      remaining: '$35,000',
-      status: 'Pending',
-      paymentStatus: 'Unpaid',
-    },
-    {
-      id: 4,
-      bookingId: 'BK-2025-004',
-      client: 'David Thompson',
-      venue: 'Rooftop Terrace',
-      event: 'Birthday Bash',
-      date: '2025-11-30',
-      time: '19:00 - 23:00',
-      totalAmount: '$5,500',
-      depositPaid: '$2,000',
-      remaining: '$3,500',
-      status: 'Confirmed',
-      paymentStatus: 'Partial',
-    },
-    {
-      id: 5,
-      bookingId: 'BK-2025-005',
-      client: 'Jennifer Lee',
-      venue: 'Grand Ballroom',
-      event: 'Charity Fundraiser',
-      date: '2025-12-20',
-      time: '17:00 - 21:00',
-      totalAmount: '$20,000',
-      depositPaid: '$20,000',
-      remaining: '$0',
-      status: 'Confirmed',
-      paymentStatus: 'Paid',
-    },
-  ]);
+  useEffect(() => {
+    loadBookings();
+  }, []);
 
-  const handleDelete = () => {
+  const loadBookings = async () => {
+    try {
+      setLoading(true);
+      const data = await bookingService.getAllBookings();
+      setBookingsList(data);
+    } catch (error) {
+      console.error('Failed to load bookings:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+  const handleDelete = async () => {
     if (deleteId) {
-      setBookingsList(prev => prev.filter(b => b.id !== deleteId));
-      setDeleteId(null);
+      try {
+        await bookingService.deleteBooking(deleteId);
+        await loadBookings();
+      } catch (error) {
+        console.error('Failed to delete booking:', error);
+      } finally {
+        setDeleteId(null);
+      }
     }
   };
 
-  const handleEdit = (booking: { id: number; bookingId: string; client: string; venue: string; event: string; date: string; time: string; totalAmount: string; depositPaid: string; remaining: string; status: string; paymentStatus: string }) => {
+  const handleEdit = (booking: Booking) => {
     const formDataObj = {
-      client: booking.client,
-      venue: booking.venue,
-      event: booking.event,
-      date: booking.date,
-      startTime: booking.time.split(' - ')[0],
-      endTime: booking.time.split(' - ')[1],
-      totalAmount: booking.totalAmount.replace('$', '').replace(',', ''),
+      client: booking.userId,
+      venue: '',
+      event: String(booking.eventId ?? ''),
+      date: booking.bookingDate?.slice(0, 10) ?? '',
+      startTime: '',
+      endTime: '',
+      totalAmount: String(booking.totalAmount ?? 0),
     };
     setEditingBooking(formDataObj);
     setFormData(formDataObj);
     setShowAddModal(true);
   };
 
-  const bookings = bookingsList;
+  const statusMap: Record<string, number> = {
+    confirmed: 1,
+    pending: 0,
+    cancelled: 2,
+    completed: 3, // treat completed as checked-in
+  };
 
-  const getStatusColor = (status: string) => {
+  const filteredBookings = bookingsList.filter((booking) => {
+    const matchesSearch = (booking.bookingReference || String(booking.eventId || ''))
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase());
+    const matchesStatus =
+      filterStatus === 'all' || booking.status === statusMap[filterStatus as keyof typeof statusMap];
+    return matchesSearch && matchesStatus;
+  });
+
+  const getStatusColor = (status: number) => {
     switch (status) {
-      case 'Confirmed':
+      case 1: // Confirmed
         return 'bg-green-100 text-green-800';
-      case 'Pending':
+      case 0: // Pending
         return 'bg-yellow-100 text-yellow-800';
-      case 'Cancelled':
+      case 3: // Cancelled
         return 'bg-red-100 text-red-800';
-      case 'Completed':
+      case 2: // Completed
         return 'bg-blue-100 text-blue-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const getPaymentStatusColor = (status: string) => {
-    switch (status) {
-      case 'Paid':
-        return 'bg-emerald-100 text-emerald-800';
-      case 'Partial':
-        return 'bg-orange-100 text-orange-800';
-      case 'Unpaid':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
+  // Removed unused getPaymentStatusColor helper
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -231,61 +186,81 @@ const Bookings: React.FC = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {bookings.map((booking) => (
+              {loading ? (
+                <tr>
+                  <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
+                    Loading bookings...
+                  </td>
+                </tr>
+              ) : filteredBookings.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
+                    No bookings found
+                  </td>
+                </tr>
+              ) : filteredBookings.map((booking) => (
                 <tr key={booking.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-primary-600">{booking.bookingId}</div>
+                    <div className="text-sm font-medium text-primary-600">BK-{booking.id}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <div className="flex-shrink-0 h-8 w-8">
-                        <div className="h-8 w-8 rounded-full bg-gradient-to-r from-primary-600 to-cyan-600 flex items-center justify-center">
+                      <div className="shrink-0 h-8 w-8">
+                        <div className="h-8 w-8 rounded-full bg-linear-to-r from-primary-600 to-cyan-600 flex items-center justify-center">
                           <FiUser className="h-4 w-4 text-white" />
                         </div>
                       </div>
                       <div className="ml-3">
-                        <div className="text-sm font-medium text-gray-900">{booking.client}</div>
+                        <div className="text-sm font-medium text-gray-900">User #{booking.userId}</div>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <div className="text-sm text-gray-900">{booking.event}</div>
+                    <div className="text-sm text-gray-900">{booking.bookingReference ? `Ref ${booking.bookingReference}` : `Event #${booking.eventId || 'N/A'}`}</div>
                     <div className="flex items-center text-xs text-gray-500 mt-1">
                       <FiMapPin className="mr-1 h-3 w-3" />
-                      {booking.venue}
+                      Venue N/A
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center text-sm text-gray-900">
                       <FiCalendar className="mr-2 h-4 w-4 text-gray-400" />
                       <div>
-                        <div>{booking.date}</div>
-                        <div className="text-xs text-gray-500">{booking.time}</div>
+                        <div>{new Date(booking.bookingDate).toLocaleDateString()}</div>
+                        <div className="text-xs text-gray-500">&nbsp;</div>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm">
-                      <div className="font-semibold text-gray-900">{booking.totalAmount}</div>
+                      <div className="font-semibold text-gray-900">${booking.totalAmount?.toFixed(2) || '0.00'}</div>
                       <div className="text-xs text-gray-500">
-                        Paid: {booking.depositPaid}
+                        Paid: ${booking.amountPaid?.toFixed(2) || '0.00'}
                       </div>
-                      {booking.remaining !== '$0' && (
+                      {(booking.totalAmount || 0) - (booking.amountPaid || 0) > 0 && (
                         <div className="text-xs text-red-600 font-medium">
-                          Due: {booking.remaining}
+                          Due: ${((booking.totalAmount || 0) - (booking.amountPaid || 0)).toFixed(2)}
                         </div>
                       )}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getPaymentStatusColor(booking.paymentStatus)}`}>
-                      {booking.paymentStatus === 'Paid' && <FiCheckCircle className="mr-1 h-3 w-3" />}
-                      {booking.paymentStatus}
-                    </span>
+                    {(() => {
+                      const paid = booking.amountPaid || 0;
+                      const total = booking.totalAmount || 0;
+                      const label = paid >= total ? 'Paid' : paid > 0 ? 'Partial' : 'Unpaid';
+                      const color = label === 'Paid' ? 'bg-emerald-100 text-emerald-800' : label === 'Partial' ? 'bg-orange-100 text-orange-800' : 'bg-red-100 text-red-800';
+                      return (
+                        <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${color}`}>
+                          {label === 'Paid' && <FiCheckCircle className="mr-1 h-3 w-3" />}
+                          {label}
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(booking.status)}`}>
-                      {booking.status}
+                      {booking.status === 1 ? 'Confirmed' : booking.status === 0 ? 'Pending' : booking.status === 2 ? 'Cancelled' : 'Checked In'}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -308,19 +283,23 @@ const Bookings: React.FC = () => {
         </div>
 
         {/* Summary Bar */}
-        <div className="bg-gradient-to-r from-primary-50 to-cyan-50 px-6 py-4 border-t border-gray-200">
+        <div className="bg-linear-to-r from-primary-50 to-cyan-50 px-6 py-4 border-t border-gray-200">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="text-center">
               <div className="text-sm text-gray-600">Total Bookings</div>
-              <div className="text-2xl font-bold text-gray-900">{bookings.length}</div>
+              <div className="text-2xl font-bold text-gray-900">{filteredBookings.length}</div>
             </div>
             <div className="text-center">
               <div className="text-sm text-gray-600">Total Revenue</div>
-              <div className="text-2xl font-bold text-emerald-600">$87,500</div>
+              <div className="text-2xl font-bold text-emerald-600">
+                ${bookingsList.reduce((sum, b) => sum + (b.totalAmount || 0), 0).toFixed(2)}
+              </div>
             </div>
             <div className="text-center">
               <div className="text-sm text-gray-600">Pending Payments</div>
-              <div className="text-2xl font-bold text-orange-600">$48,500</div>
+              <div className="text-2xl font-bold text-orange-600">
+                ${bookingsList.reduce((sum, b) => sum + ((b.totalAmount || 0) - (b.amountPaid || 0)), 0).toFixed(2)}
+              </div>
             </div>
           </div>
         </div>
@@ -329,8 +308,8 @@ const Bookings: React.FC = () => {
         <div className="bg-gray-50 px-6 py-4 flex items-center justify-between border-t border-gray-200">
           <div>
             <p className="text-sm text-gray-700">
-              Showing <span className="font-medium">1</span> to <span className="font-medium">5</span> of{' '}
-              <span className="font-medium">5</span> results
+              Showing <span className="font-medium">1</span> to <span className="font-medium">{filteredBookings.length}</span> of{' '}
+              <span className="font-medium">{filteredBookings.length}</span> results
             </p>
           </div>
           <div>
@@ -465,7 +444,7 @@ const Bookings: React.FC = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">Booking ID</label>
-                  <p className="text-base font-semibold text-gray-900">{booking.bookingId}</p>
+                  <p className="text-base font-semibold text-gray-900">BK-{booking.id}</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">Status</label>
@@ -474,42 +453,50 @@ const Bookings: React.FC = () => {
                   </span>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Client</label>
-                  <p className="text-base text-gray-900">{booking.client}</p>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">User</label>
+                  <p className="text-base text-gray-900">User #{booking.userId}</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">Venue</label>
-                  <p className="text-base text-gray-900">{booking.venue}</p>
+                  <p className="text-base text-gray-900">Venue N/A</p>
                 </div>
                 <div className="col-span-2">
                   <label className="block text-sm font-medium text-gray-500 mb-1">Event</label>
-                  <p className="text-base text-gray-900">{booking.event}</p>
+                  <p className="text-base text-gray-900">Event #{booking.eventId || 'N/A'}</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">Date</label>
-                  <p className="text-base text-gray-900">{booking.date}</p>
+                  <p className="text-base text-gray-900">{new Date(booking.bookingDate).toLocaleDateString()}</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">Time</label>
-                  <p className="text-base text-gray-900">{booking.time}</p>
+                  <p className="text-base text-gray-900">&nbsp;</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">Total Amount</label>
-                  <p className="text-lg font-bold text-gray-900">{booking.totalAmount}</p>
+                  <p className="text-lg font-bold text-gray-900">${booking.totalAmount?.toFixed(2) || '0.00'}</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">Deposit Paid</label>
-                  <p className="text-base text-green-600 font-semibold">{booking.depositPaid}</p>
+                  <p className="text-base text-green-600 font-semibold">${booking.amountPaid?.toFixed(2) || '0.00'}</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">Remaining</label>
-                  <p className="text-base text-red-600 font-semibold">{booking.remaining}</p>
+                  <p className="text-base text-red-600 font-semibold">${((booking.totalAmount || 0) - (booking.amountPaid || 0)).toFixed(2)}</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">Payment Status</label>
-                  <span className={`inline-block text-sm px-3 py-1 rounded-full font-semibold ${getPaymentStatusColor(booking.paymentStatus)}`}>
-                    {booking.paymentStatus}
-                  </span>
+                  {(() => {
+                    const paid = booking.amountPaid || 0;
+                    const total = booking.totalAmount || 0;
+                    const label = paid >= total ? 'Paid' : paid > 0 ? 'Partial' : 'Unpaid';
+                    const color = label === 'Paid' ? 'bg-emerald-100 text-emerald-800' : label === 'Partial' ? 'bg-orange-100 text-orange-800' : 'bg-red-100 text-red-800';
+                    return (
+                      <span className={`inline-block text-sm px-3 py-1 rounded-full font-semibold ${color}`}>
+                        {label}
+                      </span>
+                    );
+                  })()}
                 </div>
               </div>
               <div className="flex justify-end pt-4">
