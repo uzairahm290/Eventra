@@ -1,35 +1,28 @@
 <#
   start-dev.ps1
-  Helper script to bootstrap development environment:
-   - starts Docker Compose (SQL Server)
-   - restores dotnet tools and packages
-   - applies EF migrations (creates DB)
+  Simplified development bootstrap (no Docker required):
+   - restores dotnet tools & packages
+   - applies EF Core migrations to LocalDB
+   - runs the backend
 
-  Usage: run from repository root in PowerShell with admin rights if needed
-    ./start-dev.ps1
+  Usage:
+    ./start-dev.ps1   (from repo root)
+  Afterwards start frontend:
+    cd eventra_app; npm install; npm run dev
 #>
 
-Write-Host "Starting development environment setup..."
+Write-Host "[Eventra] Starting simplified development setup..."
 
-# 1) Start database
-Write-Host "Bringing up Docker Compose services..."
-docker compose up -d
+Set-Location .\eventra_api
 
-Write-Host "Waiting a few seconds for SQL Server to initialize..."
-Start-Sleep -Seconds 8
-
-# 2) Restore dotnet tools and packages
-Write-Host "Restoring dotnet tools and packages..."
-cd .\eventra_api
+Write-Host "[Eventra] Restoring dotnet tools and packages..."
 dotnet tool restore
 dotnet restore
 
-# 3) Apply EF Core migrations
-Write-Host "Applying EF Core migrations (this will create the database)..."
+Write-Host "[Eventra] Applying EF Core migrations to LocalDB..."
 dotnet ef database update
 
-Write-Host "Bootstrap complete. Next steps:"
-Write-Host " - Start the backend: open eventra_api in Visual Studio or run 'dotnet run' inside eventra_api folder"
-Write-Host " - Start the frontend: 'cd eventra_app' then 'npm install' and 'npm run dev'"
+Write-Host "[Eventra] Launching backend (Ctrl+C to stop)..."
+dotnet run
 
-Write-Host "You can now sign in with the seeded dev user: dev@eventra.local / Dev@12345!"
+Write-Host "[Eventra] Seeded dev user: dev@eventra.local / Dev@12345!"

@@ -4310,29 +4310,28 @@
       "Microsoft.EntityFrameworkCore >= 8.0.11",
       "Microsoft.EntityFrameworkCore.SqlServer >= 8.0.11",
       "Microsoft.EntityFrameworkCore.Tools >= 8.0.11",
-      "Swashbuckle.AspNetCore >= 8.1.4",
-      "Swashbuckle.AspNetCore.Swagger >= 8.1.4",
-      "Swashbuckle.AspNetCore.SwaggerUI >= 8.1.4"
+      "Swashbuckle.AspNetCore >= 8.1.4"
     ]
   },
   "packageFolders": {
-    "C:\\Users\\Muhammad Sanaan\\.nuget\\packages\\": {},
+    "C:\\Users\\uzair\\.nuget\\packages\\": {},
     "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\Muhammad Sanaan\\Desktop\\Eventra\\eventra_api\\eventra_api.csproj",
+      "projectUniqueName": "D:\\Eventra\\eventra_api\\eventra_api.csproj",
       "projectName": "eventra_api",
-      "projectPath": "C:\\Users\\Muhammad Sanaan\\Desktop\\Eventra\\eventra_api\\eventra_api.csproj",
-      "packagesPath": "C:\\Users\\Muhammad Sanaan\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\Muhammad Sanaan\\Desktop\\Eventra\\eventra_api\\obj\\",
+      "projectPath": "D:\\Eventra\\eventra_api\\eventra_api.csproj",
+      "packagesPath": "C:\\Users\\uzair\\.nuget\\packages\\",
+      "outputPath": "D:\\Eventra\\eventra_api\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
       ],
       "configFilePaths": [
-        "C:\\Users\\Muhammad Sanaan\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "D:\\Eventra\\NuGet.Config",
+        "C:\\Users\\uzair\\AppData\\Roaming\\NuGet\\NuGet.Config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
       ],
@@ -4340,7 +4339,6 @@
         "net8.0"
       ],
       "sources": {
-        "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
         "https://api.nuget.org/v3/index.json": {}
       },
       "frameworks": {
@@ -4354,12 +4352,16 @@
           "NU1605"
         ]
       },
+      "restoreLockProperties": {
+        "restorePackagesWithLockFile": "true",
+        "nuGetLockFilePath": "packages.lock.json",
+        "restoreLockedMode": true
+      },
       "restoreAuditProperties": {
         "enableAudit": "true",
         "auditLevel": "low",
         "auditMode": "direct"
-      },
-      "SdkAnalysisLevel": "9.0.300"
+      }
     },
     "frameworks": {
       "net8.0": {
@@ -4390,14 +4392,6 @@
           "Swashbuckle.AspNetCore": {
             "target": "Package",
             "version": "[8.1.4, )"
-          },
-          "Swashbuckle.AspNetCore.Swagger": {
-            "target": "Package",
-            "version": "[8.1.4, )"
-          },
-          "Swashbuckle.AspNetCore.SwaggerUI": {
-            "target": "Package",
-            "version": "[8.1.4, )"
           }
         },
         "imports": [
@@ -4419,7 +4413,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.305/PortableRuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.416/PortableRuntimeIdentifierGraph.json"
       }
     }
   }
