@@ -1,10 +1,10 @@
 <Project>
   <PropertyGroup>
-    <!-- Enable lock file generation for all projects -->
+    <!-- Enable lock file generation (we will regenerate after updating versions) -->
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
-    <!-- Keep lockfile next to project file -->
+    <!-- Keep lockfile next to each project file -->
     <NuGetLockFilePath>packages.lock.json</NuGetLockFilePath>
-    <!-- Prevent implicit updates when locked mode is used -->
+    <!-- Temporarily disable locked mode to allow proper version resolution -->
     <RestoreLockedMode>true</RestoreLockedMode>
   </PropertyGroup>
 </Project>

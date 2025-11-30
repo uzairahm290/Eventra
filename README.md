@@ -45,7 +45,7 @@ git clone https://github.com/uzairahm290/Eventra.git
 4. Open [http://localhost:5173](http://localhost:5173) in your browser.
 
 #### API Proxy Configuration
-The frontend is configured to proxy API requests to the backend at `https://localhost:7079` (see `vite.config.ts`). This matches the default HTTPS port used by the backend when running in Visual Studio.
+The frontend proxies API requests to the backend at `http://localhost:5152` (see `vite.config.ts`). We now use the HTTP profile for simplicity. If you run the HTTPS profile the backend will also be available at `https://localhost:7079`, but the frontend proxy targets the HTTP port.
 
 ---
 
@@ -53,29 +53,38 @@ The frontend is configured to proxy API requests to the backend at `https://loca
 ## Backend Setup (`eventra_api`)
 
 ### Prerequisites
-- .NET 8 SDK
-- Visual Studio 2022 or later
+- Visual Studio 2022 (latest) with the "ASP.NET and web development" workload
+- .NET 8 SDK (installed automatically by VS if selected)
 
-### Running with Visual Studio
-1. Open the `eventra_api.sln` solution file in Visual Studio.
-2. Restore NuGet packages if prompted.
-3. Press `F5` to build and run the API (or click the "Start" button).
-4. The API will be available at [http://localhost:7079](http://localhost:7079) or as configured in `launchSettings.json`.
+### Run the Backend (Visual Studio Only)
+1. Open the solution: `eventra_api/eventra_api.sln` in Visual Studio.
+2. VS automatically restores all NuGet packages on load (no CLI needed).
+3. Press `F5` (Debug) or `Ctrl+F5` (Run without debug).
+4. The API starts on `http://localhost:5152` (HTTP profile). An HTTPS endpoint (`https://localhost:7079`) also exists but is not used by the frontend proxy.
 
-### Running with Command Line (Optional)
-1. Navigate to the backend directory:
-   ```sh
-   cd eventra_api
-   ```
-2. Restore dependencies:
-   ```sh
-   dotnet restore
-   ```
-3. Run the API:
-   ```sh
-   dotnet run
-   ```
-4. The API will be available at [http://localhost:7079](http://localhost:7079) or as configured in `launchSettings.json`.
+### Database & Migrations
+The first run automatically applies EF Core migrations and seeds development data (admin user + sample events). No manual `dotnet ef` commands are required when using Visual Studio.
+
+Development connection string (LocalDB):
+```
+Server=(localdb)\\MSSQLLocalDB;Database=EventraDB;Trusted_Connection=True;TrustServerCertificate=True;
+```
+
+If you need to add a new migration later:
+1. Open the Package Manager Console in Visual Studio.
+2. Set Default Project to `eventra_api`.
+3. Run:
+```
+Add-Migration YourMigrationName
+Update-Database
+```
+
+### NuGet Package Consistency
+All developers use the same package versions defined in `eventra_api.csproj`. Visual Studio handles restore automatically. To enforce locked versions across the team you can (optional):
+1. Enable package lock: add `<RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>` to a `Directory.Build.props` or create a `packages.lock.json` by running a restore once.
+2. Commit the generated `packages.lock.json` file.
+
+This ensures reproducible restores without needing CLI scripts.
 
 ---
 
@@ -86,43 +95,18 @@ The frontend is configured to proxy API requests to the backend at `https://loca
 
 ---
 
-## Database setup (development)
+## Frontend & Backend Startup Flow
 
-To make it easy for team members to run the database locally, this project includes a Docker Compose configuration that starts a SQL Server container and uses the development connection string in `eventra_api/appsettings.Development.json`.
+1. Start backend via Visual Studio (`F5`).
+2. In another terminal start frontend:
+   ```powershell
+   cd eventra_app
+   npm install
+   npm run dev
+   ```
+3. Sign in using seeded development admin credentials.
 
-1) Start the database with Docker Compose (requires Docker Desktop):
-
-```powershell
-# From repository root
-docker compose up -d
-
-# Verify the SQL Server container is healthy
-docker compose ps
-```
-
-2) The development connection string (already added to `eventra_api/appsettings.Development.json`) points to the container:
-
-```
-Server=localhost,1433;Database=EventraDB;User Id=sa;Password=Your_password123;TrustServerCertificate=True;
-```
-
-3) Run EF Core migrations to create the database schema:
-
-```powershell
-cd eventra_api
-dotnet tool restore
-dotnet ef database update
-# If EF tools are not installed globally, install the dotnet-ef tool:
-# dotnet tool install --global dotnet-ef
-```
-
-4) Start the backend (in Visual Studio or `dotnet run`) and then the frontend. The app will connect to the local Docker SQL Server instance.
-
-Notes:
-- The chosen SA password `Your_password123` is an example. If you change it in `docker-compose.yml`, update `appsettings.Development.json` accordingly or set the `ConnectionStrings__DefaultConnection` environment variable when running the API.
-- If your team prefers SQLite for development (no Docker required), let me know and I can add an alternative SQLite configuration and migration guidance.
-
-### Seeded development data
+### Seeded Development Data
 
 When running in `Development` mode this app will automatically apply migrations and seed a small set of development data (admin user + sample events). The seeded admin credentials are:
 
@@ -130,7 +114,7 @@ When running in `Development` mode this app will automatically apply migrations 
 - Username: `devadmin`
 - Password: `Dev@12345!`
 
-Use the above credentials to sign in immediately after you start the API and frontend.
+Use these credentials to sign in after starting the API and frontend.
 
 ---
 

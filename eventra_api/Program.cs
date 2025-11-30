@@ -97,18 +97,17 @@ if (app.Environment.IsDevelopment())
 // Development database seeding
 // -------------------------
 // Applies migrations and seeds an admin user and sample data when running in Development.
-static async Task SeedDevelopmentDataAsync(IServiceProvider services)
+static async Task SeedDevelopmentDataAsync(IServiceProvider rootProvider)
 {
+    using var scope = rootProvider.CreateScope();
+    var services = scope.ServiceProvider;
     var env = services.GetRequiredService<IHostEnvironment>();
     if (!env.IsDevelopment()) return;
 
     var db = services.GetRequiredService<AppDbContext>();
-    // Apply any pending migrations
     await db.Database.MigrateAsync();
 
     var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
-
-    // Create a development admin user if not present
     var adminEmail = "dev@eventra.local";
     if (userManager.Users.All(u => u.Email != adminEmail))
     {
@@ -120,19 +119,15 @@ static async Task SeedDevelopmentDataAsync(IServiceProvider services)
             SecondName = "Admin",
             DateRegistered = DateTime.UtcNow
         };
-
-        // Password will be hashed by Identity
         await userManager.CreateAsync(admin, "Dev@12345!");
     }
 
-    // Seed sample events if none exist
     if (!db.Events.Any())
     {
         db.Events.AddRange(
             new Event { Title = "Sample Meetup", Date = DateTime.UtcNow.AddDays(7), Location = "Main Hall", Description = "A sample meetup created for development.", MaxAttendees = 100 },
             new Event { Title = "Product Launch", Date = DateTime.UtcNow.AddDays(21), Location = "Auditorium", Description = "Product launch demo event.", MaxAttendees = 250 }
         );
-
         await db.SaveChangesAsync();
     }
 }
