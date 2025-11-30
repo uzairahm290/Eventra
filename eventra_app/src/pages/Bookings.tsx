@@ -96,9 +96,9 @@ const Bookings: React.FC = () => {
         return 'bg-green-100 text-green-800';
       case 0: // Pending
         return 'bg-yellow-100 text-yellow-800';
-      case 3: // Cancelled
+      case 2: // Cancelled
         return 'bg-red-100 text-red-800';
-      case 2: // Completed
+      case 3: // Checked In
         return 'bg-blue-100 text-blue-800';
       default:
         return 'bg-gray-100 text-gray-800';
@@ -257,7 +257,13 @@ const Bookings: React.FC = () => {
                     {(() => {
                       const paid = booking.amountPaid || 0;
                       const total = booking.totalAmount || 0;
-                      const label = paid >= total ? 'Paid' : paid > 0 ? 'Partial' : 'Unpaid';
+                      let label: 'Paid' | 'Partial' | 'Unpaid' = 'Unpaid';
+                      if (total > 0) {
+                        label = paid >= total ? 'Paid' : paid > 0 ? 'Partial' : 'Unpaid';
+                      } else {
+                        // Zero-priced events should not show Paid unless there was a payment recorded > 0
+                        label = paid > 0 ? 'Paid' : 'Unpaid';
+                      }
                       const color = label === 'Paid' ? 'bg-emerald-100 text-emerald-800' : label === 'Partial' ? 'bg-orange-100 text-orange-800' : 'bg-red-100 text-red-800';
                       return (
                         <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${color}`}>
@@ -280,9 +286,23 @@ const Bookings: React.FC = () => {
                       <button onClick={() => handleEdit(booking)} className="text-green-600 hover:text-green-800 p-2 rounded-lg hover:bg-green-50">
                         <FiEdit className="h-4 w-4" />
                       </button>
-                      <button onClick={() => setDeleteId(booking.id)} className="text-red-600 hover:text-red-800 p-2 rounded-lg hover:bg-red-50">
-                        <FiTrash2 className="h-4 w-4" />
-                      </button>
+                      {(() => {
+                        const paid = (booking.amountPaid || 0) >= (booking.totalAmount || 0);
+                        const isCancelled = booking.status === 2; // Cancelled
+                        const disableDelete = paid || isCancelled;
+                        return (
+                          <button
+                            onClick={() => {
+                              if (!disableDelete) setDeleteId(booking.id);
+                            }}
+                            disabled={disableDelete}
+                            title={disableDelete ? (paid ? 'Cannot delete a paid booking' : 'Booking already cancelled') : 'Delete booking'}
+                            className={`p-2 rounded-lg ${disableDelete ? 'text-gray-400 cursor-not-allowed' : 'text-red-600 hover:text-red-800 hover:bg-red-50'}`}
+                          >
+                            <FiTrash2 className="h-4 w-4" />
+                          </button>
+                        );
+                      })()}
                     </div>
                   </td>
                 </tr>

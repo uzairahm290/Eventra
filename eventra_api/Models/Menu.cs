@@ -6,8 +6,8 @@ namespace eventra_api.Models
     {
         public int Id { get; set; }
 
-        [Required]
-        public int EventId { get; set; }
+        // EventId is now optional - menus are catalog items that can be assigned to events
+        public int? EventId { get; set; }
 
         [Required]
         [MaxLength(200)]
@@ -37,7 +37,7 @@ namespace eventra_api.Models
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-        // Navigation property
-        public Event Event { get; set; } = null!;
+        // Navigation property - nullable since menus can exist without being assigned to an event
+        public Event? Event { get; set; }
     }
 }
