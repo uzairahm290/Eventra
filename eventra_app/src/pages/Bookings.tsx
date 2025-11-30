@@ -6,7 +6,7 @@ const Bookings: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [showAddModal, setShowAddModal] = useState(false);
-  const [editingBooking, setEditingBooking] = useState<any>(null);
+  const [editingBooking, setEditingBooking] = useState<typeof formData | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [viewId, setViewId] = useState<number | null>(null);
   const [formData, setFormData] = useState({
@@ -99,9 +99,8 @@ const Bookings: React.FC = () => {
     }
   };
 
-  const handleEdit = (booking: any) => {
-    setEditingBooking(booking);
-    setFormData({
+  const handleEdit = (booking: { id: number; bookingId: string; client: string; venue: string; event: string; date: string; time: string; totalAmount: string; depositPaid: string; remaining: string; status: string; paymentStatus: string }) => {
+    const formDataObj = {
       client: booking.client,
       venue: booking.venue,
       event: booking.event,
@@ -109,7 +108,9 @@ const Bookings: React.FC = () => {
       startTime: booking.time.split(' - ')[0],
       endTime: booking.time.split(' - ')[1],
       totalAmount: booking.totalAmount.replace('$', '').replace(',', ''),
-    });
+    };
+    setEditingBooking(formDataObj);
+    setFormData(formDataObj);
     setShowAddModal(true);
   };
 

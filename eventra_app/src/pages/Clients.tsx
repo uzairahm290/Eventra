@@ -5,7 +5,7 @@ import Modal from '../components/Modal';
 const Clients: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
-  const [editingClient, setEditingClient] = useState<any>(null);
+  const [editingClient, setEditingClient] = useState<typeof formData | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [viewId, setViewId] = useState<number | null>(null);
   const [formData, setFormData] = useState({
@@ -86,7 +86,7 @@ const Clients: React.FC = () => {
     }
   };
 
-  const handleEdit = (client: any) => {
+  const handleEdit = (client: { id: number; name: string; email: string; phone: string; company: string; address: string; totalBookings: number; totalSpent: string; status: string; lastBooking: string }) => {
     setEditingClient(client);
     setFormData({
       name: client.name,
