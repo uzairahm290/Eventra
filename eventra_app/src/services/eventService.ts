@@ -122,7 +122,8 @@ class EventService {
     return await apiService.delete(`/Events/${id}`);
   }
 
-  private mapFromDto = (dto: any): Event => {
+  private mapFromDto = (dto: unknown): Event => {
+    const d = dto as Record<string, unknown>;
     // Map category/status strings to numeric enum values if needed
     const mapEnum = (obj: Record<string, number>, value: unknown, fallback: number) => {
       if (typeof value === 'number') return value;
@@ -131,29 +132,29 @@ class EventService {
     };
 
     return {
-      id: dto.id,
-      title: dto.title,
-      date: typeof dto.date === 'string' ? dto.date : new Date(dto.date).toISOString(),
-      endDate: dto.endDate ? (typeof dto.endDate === 'string' ? dto.endDate : new Date(dto.endDate).toISOString()) : undefined,
-      location: dto.location,
-      description: dto.description,
-      maxAttendees: dto.maxAttendees,
-      currentAttendees: dto.currentAttendees ?? 0,
-      category: mapEnum(EventCategory as unknown as Record<string, number>, dto.category, EventCategory.Other) as EventCategory,
-      status: mapEnum(EventStatus as unknown as Record<string, number>, dto.status, EventStatus.Draft) as EventStatus,
-      venueId: dto.venueId ?? undefined,
-      imageUrl: dto.imageUrl ?? undefined,
-      ticketPrice: dto.ticketPrice ?? undefined,
-      isFree: !!dto.isFree,
-      requiresApproval: !!dto.requiresApproval,
-      isPublic: !!dto.isPublic,
-      organizerName: dto.organizerName ?? undefined,
-      organizerEmail: dto.organizerEmail ?? undefined,
-      organizerPhone: dto.organizerPhone ?? undefined,
-      createdBy: dto.createdBy ?? '',
-      createdAt: typeof dto.createdAt === 'string' ? dto.createdAt : (dto.createdAt ? new Date(dto.createdAt).toISOString() : new Date().toISOString()),
-      updatedAt: dto.updatedAt ? (typeof dto.updatedAt === 'string' ? dto.updatedAt : new Date(dto.updatedAt).toISOString()) : undefined,
-      updatedBy: dto.updatedBy ?? undefined,
+      id: d.id as number,
+      title: d.title as string,
+      date: typeof d.date === 'string' ? (d.date as string) : new Date(d.date as string | number | Date).toISOString(),
+      endDate: d.endDate ? (typeof d.endDate === 'string' ? (d.endDate as string) : new Date(d.endDate as string | number | Date).toISOString()) : undefined,
+      location: d.location as string,
+      description: (d.description as string) ?? '',
+      maxAttendees: d.maxAttendees as number,
+      currentAttendees: (d.currentAttendees as number) ?? 0,
+      category: mapEnum(EventCategory as unknown as Record<string, number>, d.category, EventCategory.Other) as EventCategory,
+      status: mapEnum(EventStatus as unknown as Record<string, number>, d.status, EventStatus.Draft) as EventStatus,
+      venueId: (d.venueId as number) ?? undefined,
+      imageUrl: (d.imageUrl as string) ?? undefined,
+      ticketPrice: (d.ticketPrice as number) ?? undefined,
+      isFree: !!d.isFree,
+      requiresApproval: !!d.requiresApproval,
+      isPublic: !!d.isPublic,
+      organizerName: (d.organizerName as string) ?? undefined,
+      organizerEmail: (d.organizerEmail as string) ?? undefined,
+      organizerPhone: (d.organizerPhone as string) ?? undefined,
+      createdBy: (d.createdBy as string) ?? '',
+      createdAt: typeof d.createdAt === 'string' ? (d.createdAt as string) : (d.createdAt ? new Date(d.createdAt as string | number | Date).toISOString() : new Date().toISOString()),
+      updatedAt: d.updatedAt ? (typeof d.updatedAt === 'string' ? (d.updatedAt as string) : new Date(d.updatedAt as string | number | Date).toISOString()) : undefined,
+      updatedBy: (d.updatedBy as string) ?? undefined,
     };
   };
 

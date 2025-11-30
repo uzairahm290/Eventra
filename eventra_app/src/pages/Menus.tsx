@@ -1,72 +1,126 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { FiPlus, FiEdit2, FiTrash2, FiDollarSign, FiEye } from 'react-icons/fi';
 import Modal from '../components/Modal';
-
-interface MenuItem {
-  id: number;
-  name: string;
-  category: string;
-  items: string[];
-  pricePerPerson: number;
-  description: string;
-}
+import menuService from '../services/menuService';
+import type { Menu, CreateMenuDto } from '../services/menuService';
 
 const Menus: React.FC = () => {
-  const [menus, setMenus] = useState<MenuItem[]>([
-    {
-      id: 1,
-      name: 'Classic Wedding Package',
-      category: 'Wedding',
-      items: ['Appetizers', 'Main Course (Chicken/Beef)', 'Dessert', 'Beverages'],
-      pricePerPerson: 45,
-      description: 'Perfect for traditional wedding celebrations'
-    },
-    {
-      id: 2,
-      name: 'Corporate Lunch',
-      category: 'Corporate',
-      items: ['Salad', 'Sandwich Platter', 'Fruit', 'Coffee/Tea'],
-      pricePerPerson: 25,
-      description: 'Ideal for business meetings and conferences'
-    },
-    {
-      id: 3,
-      name: 'Premium Buffet',
-      category: 'Party',
-      items: ['Appetizers', 'Soup', 'Multiple Main Courses', 'Dessert Bar', 'Premium Drinks'],
-      pricePerPerson: 65,
-      description: 'Luxury buffet with extensive options'
-    }
-  ]);
+  const [menus, setMenus] = useState<Menu[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [eventId, setEventId] = useState<number>(1);
 
   const [showAddModal, setShowAddModal] = useState(false);
-  const [editingMenu, setEditingMenu] = useState<MenuItem | null>(null);
+  const [editingMenu, setEditingMenu] = useState<Menu | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [viewId, setViewId] = useState<number | null>(null);
+  const [formData, setFormData] = useState<CreateMenuDto>({
+    eventId,
+    name: '',
+    category: 'Wedding',
+    description: '',
+    pricePerPerson: 0,
+    minimumGuests: 1,
+    isVegetarian: false,
+    isVegan: false,
+    isGlutenFree: false,
+    allergenInfo: '',
+  });
 
-  const handleEdit = (menu: MenuItem) => {
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await menuService.getByEvent(eventId);
+        setMenus(data);
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : 'Failed to load menus';
+        setError(msg);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [eventId]);
+
+  useEffect(() => {
+    setFormData((prev) => ({ ...prev, eventId }));
+  }, [eventId]);
+
+  const handleEdit = (menu: Menu) => {
     setEditingMenu(menu);
+    setFormData({
+      eventId: menu.eventId,
+      name: menu.name,
+      category: menu.category,
+      description: menu.description,
+      pricePerPerson: menu.pricePerPerson,
+      minimumGuests: menu.minimumGuests,
+      isVegetarian: menu.isVegetarian,
+      isVegan: menu.isVegan,
+      isGlutenFree: menu.isGlutenFree,
+      allergenInfo: menu.allergenInfo,
+    });
     setShowAddModal(true);
   };
 
   const handleDelete = () => {
     if (deleteId) {
-      setMenus(menus.filter(m => m.id !== deleteId));
-      setDeleteId(null);
+      // Attempt API delete; if unauthorized, reflect error
+      menuService.delete(deleteId)
+        .then(() => setMenus(menus.filter(m => m.id !== deleteId)))
+        .catch(() => {
+          setError('Delete failed. You may need to login as Admin.');
+        })
+        .finally(() => setDeleteId(null));
     }
   };
 
+  const categoriesCount = useMemo(() => new Set(menus.map(m => m.category)).size, [menus]);
+  const avgPrice = useMemo(() => {
+    if (!menus.length) return 0;
+    return Math.round(menus.reduce((sum, m) => sum + (m.pricePerPerson || 0), 0) / menus.length);
+  }, [menus]);
+
   return (
     <div className="space-y-6">
+      {loading && (
+        <div className="card p-3 text-sm text-gray-700 bg-gray-50">Loading menus…</div>
+      )}
+      {error && (
+        <div className="card p-3 text-sm text-red-700 bg-red-50">{error}</div>
+      )}
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Food Menus</h1>
           <p className="mt-2 text-gray-600">Manage your event catering menus</p>
         </div>
+        <div className="flex items-center gap-3">
+          <label className="text-sm text-gray-700">Event ID</label>
+          <input
+            type="number"
+            value={eventId}
+            onChange={(e) => setEventId(Number(e.target.value) || 1)}
+            className="w-24 px-3 py-2 rounded-md border border-gray-300"
+          />
+        </div>
         <button
           onClick={() => {
             setEditingMenu(null);
+            setFormData({
+              eventId,
+              name: '',
+              category: 'Wedding',
+              description: '',
+              pricePerPerson: 0,
+              minimumGuests: 1,
+              isVegetarian: false,
+              isVegan: false,
+              isGlutenFree: false,
+              allergenInfo: '',
+            });
             setShowAddModal(true);
           }}
           className="btn-primary inline-flex items-center"
@@ -93,9 +147,7 @@ const Menus: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Categories</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">
-                {new Set(menus.map(m => m.category)).size}
-              </p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{categoriesCount}</p>
             </div>
             <div className="p-3 bg-cyan-50 rounded-lg">
               <FiEdit2 className="w-6 h-6 text-cyan-600" />
@@ -106,9 +158,7 @@ const Menus: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Avg Price/Person</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">
-                ${Math.round(menus.reduce((sum, m) => sum + m.pricePerPerson, 0) / menus.length)}
-              </p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">${avgPrice}</p>
             </div>
             <div className="p-3 bg-green-50 rounded-lg">
               <FiDollarSign className="w-6 h-6 text-green-600" />
@@ -155,10 +205,10 @@ const Menus: React.FC = () => {
             <div className="space-y-2 mb-4">
               <p className="text-sm font-medium text-gray-700">Includes:</p>
               <ul className="space-y-1">
-                {menu.items.map((item, index) => (
+                {(menu.allergenInfo ? menu.allergenInfo.split(',') : []).map((item, index) => (
                   <li key={index} className="text-sm text-gray-600 flex items-center">
                     <span className="w-1.5 h-1.5 bg-primary-600 rounded-full mr-2"></span>
-                    {item}
+                    {item.trim()}
                   </li>
                 ))}
               </ul>
@@ -198,10 +248,21 @@ const Menus: React.FC = () => {
         onClose={() => setShowAddModal(false)} 
         title={editingMenu ? 'Edit Menu' : 'Add New Menu'}
       >
-        <form onSubmit={(e) => {
+        <form onSubmit={async (e) => {
           e.preventDefault();
-          console.log('Menu saved');
-          setShowAddModal(false);
+          try {
+            if (editingMenu) {
+              await menuService.update(editingMenu.id, formData);
+            } else {
+              await menuService.create(formData);
+            }
+            const refreshed = await menuService.getByEvent(eventId);
+            setMenus(refreshed);
+            setShowAddModal(false);
+          } catch (e: unknown) {
+            const msg = e instanceof Error ? e.message : 'Save failed. You may need to login as Admin.';
+            setError(msg);
+          }
         }} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Menu Name</label>
@@ -210,11 +271,17 @@ const Menus: React.FC = () => {
               required
               className="block w-full px-3 py-2 rounded-md border border-gray-300"
               placeholder="Classic Wedding Package"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
-            <select className="block w-full px-3 py-2 rounded-md border border-gray-300">
+            <select
+              className="block w-full px-3 py-2 rounded-md border border-gray-300"
+              value={formData.category}
+              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+            >
               <option>Wedding</option>
               <option>Corporate</option>
               <option>Party</option>
@@ -228,6 +295,8 @@ const Menus: React.FC = () => {
               required
               className="block w-full px-3 py-2 rounded-md border border-gray-300"
               placeholder="45"
+              value={formData.pricePerPerson}
+              onChange={(e) => setFormData({ ...formData, pricePerPerson: Number(e.target.value) })}
             />
           </div>
           <div>
@@ -236,15 +305,44 @@ const Menus: React.FC = () => {
               rows={3}
               className="block w-full px-3 py-2 rounded-md border border-gray-300"
               placeholder="Perfect for traditional wedding celebrations"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Items Included (one per line)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Allergen Info (comma separated)</label>
             <textarea
-              rows={4}
+              rows={3}
               className="block w-full px-3 py-2 rounded-md border border-gray-300"
-              placeholder="Appetizers&#10;Main Course&#10;Dessert&#10;Beverages"
+              placeholder="Peanuts, Dairy, Gluten"
+              value={formData.allergenInfo}
+              onChange={(e) => setFormData({ ...formData, allergenInfo: e.target.value })}
             />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Minimum Guests</label>
+              <input
+                type="number"
+                className="block w-full px-3 py-2 rounded-md border border-gray-300"
+                value={formData.minimumGuests}
+                onChange={(e) => setFormData({ ...formData, minimumGuests: Number(e.target.value) })}
+              />
+            </div>
+            <div className="flex items-center gap-6">
+              <label className="flex items-center gap-2 text-sm text-gray-700">
+                <input type="checkbox" checked={formData.isVegetarian} onChange={(e) => setFormData({ ...formData, isVegetarian: e.target.checked })} />
+                Vegetarian
+              </label>
+              <label className="flex items-center gap-2 text-sm text-gray-700">
+                <input type="checkbox" checked={formData.isVegan} onChange={(e) => setFormData({ ...formData, isVegan: e.target.checked })} />
+                Vegan
+              </label>
+              <label className="flex items-center gap-2 text-sm text-gray-700">
+                <input type="checkbox" checked={formData.isGlutenFree} onChange={(e) => setFormData({ ...formData, isGlutenFree: e.target.checked })} />
+                Gluten Free
+              </label>
+            </div>
           </div>
           <div className="flex justify-end space-x-3 pt-4">
             <button
@@ -292,12 +390,12 @@ const Menus: React.FC = () => {
                   <p className="text-base text-gray-900">{menu.description}</p>
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-500 mb-2">Items Included</label>
+                  <label className="block text-sm font-medium text-gray-500 mb-2">Allergen Info</label>
                   <ul className="space-y-2">
-                    {menu.items.map((item, index) => (
+                    {(menu.allergenInfo ? menu.allergenInfo.split(',') : []).map((item, index) => (
                       <li key={index} className="text-base text-gray-900 flex items-center">
                         <span className="w-2 h-2 bg-primary-600 rounded-full mr-3"></span>
-                        {item}
+                        {item.trim()}
                       </li>
                     ))}
                   </ul>

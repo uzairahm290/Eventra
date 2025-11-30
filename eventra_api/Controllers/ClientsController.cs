@@ -10,7 +10,6 @@ using System;
 
 namespace eventra_api.Controllers
 {
-    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class ClientsController : ControllerBase
