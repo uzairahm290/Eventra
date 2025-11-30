@@ -18,17 +18,46 @@ namespace eventra_api.Controllers
             _context = context;
         }
 
+        // GET: api/Menus - Get all menus in catalog
+        [AllowAnonymous]
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<MenuDto>>> GetAllMenus()
+        {
+            var menus = await _context.Menus
+                .Where(m => m.IsAvailable)
+                .Select(m => new MenuDto
+                {
+                    Id = m.Id,
+                    EventId = m.EventId,
+                    Name = m.Name,
+                    Category = m.Category,
+                    Description = m.Description,
+                    PricePerPerson = m.PricePerPerson,
+                    MinimumGuests = m.MinimumGuests,
+                    IsVegetarian = m.IsVegetarian,
+                    IsVegan = m.IsVegan,
+                    IsGlutenFree = m.IsGlutenFree,
+                    AllergenInfo = m.AllergenInfo,
+                    IsAvailable = m.IsAvailable
+                })
+                .ToListAsync();
+
+            return Ok(menus);
+        }
+
         // GET: api/Menus/event/5
         [AllowAnonymous]
         [HttpGet("event/{eventId}")]
         public async Task<ActionResult<IEnumerable<MenuDto>>> GetEventMenus(int eventId)
         {
+            // Return empty array if event doesn't exist instead of 404
             var eventExists = await _context.Events.AnyAsync(e => e.Id == eventId);
             if (!eventExists)
             {
-                return NotFound(new { message = "Event not found." });
+                return Ok(new List<MenuDto>());
             }
 
+            // Return only menus assigned to this specific event
             var menus = await _context.Menus
                 .Where(m => m.EventId == eventId && m.IsAvailable)
                 .Select(m => new MenuDto
@@ -83,14 +112,18 @@ namespace eventra_api.Controllers
         }
 
         // POST: api/Menus
-        [Authorize(Roles = "Admin")]
+        [AllowAnonymous]
         [HttpPost]
         public async Task<ActionResult<MenuDto>> CreateMenu(CreateMenuDto createDto)
         {
-            var eventExists = await _context.Events.AnyAsync(e => e.Id == createDto.EventId);
-            if (!eventExists)
+            // Validate event exists if EventId is provided
+            if (createDto.EventId.HasValue)
             {
-                return NotFound(new { message = "Event not found." });
+                var eventExists = await _context.Events.AnyAsync(e => e.Id == createDto.EventId.Value);
+                if (!eventExists)
+                {
+                    return NotFound(new { message = "Event not found." });
+                }
             }
 
             var menu = new Menu
@@ -132,7 +165,7 @@ namespace eventra_api.Controllers
         }
 
         // PUT: api/Menus/5
-        [Authorize(Roles = "Admin")]
+        [AllowAnonymous]
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateMenu(int id, CreateMenuDto updateDto)
         {
@@ -170,7 +203,7 @@ namespace eventra_api.Controllers
         }
 
         // DELETE: api/Menus/5
-        [Authorize(Roles = "Admin")]
+        [AllowAnonymous]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteMenu(int id)
         {
@@ -187,7 +220,7 @@ namespace eventra_api.Controllers
         }
 
         // PATCH: api/Menus/5/availability
-        [Authorize(Roles = "Admin")]
+        [AllowAnonymous]
         [HttpPatch("{id}/availability")]
         public async Task<IActionResult> ToggleAvailability(int id, [FromBody] bool isAvailable)
         {

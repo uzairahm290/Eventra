@@ -5,8 +5,8 @@ namespace eventra_api.Models
     // DTO for creating a menu
     public class CreateMenuDto
     {
-        [Required]
-        public int EventId { get; set; }
+        // Optional - menu can be created as catalog item without being assigned to event
+        public int? EventId { get; set; }
 
         [Required]
         [MaxLength(200)]
@@ -38,7 +38,7 @@ namespace eventra_api.Models
     public class MenuDto
     {
         public int Id { get; set; }
-        public int EventId { get; set; }
+        public int? EventId { get; set; }
         public string Name { get; set; } = string.Empty;
         public string? Category { get; set; }
         public string? Description { get; set; }

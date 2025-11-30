@@ -9,14 +9,13 @@ const Menus: React.FC = () => {
   const [menus, setMenus] = useState<Menu[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [eventId, setEventId] = useState<number>(1);
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingMenu, setEditingMenu] = useState<Menu | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [viewId, setViewId] = useState<number | null>(null);
   const [formData, setFormData] = useState<CreateMenuDto>({
-    eventId,
+    eventId: null,
     name: '',
     category: 'Wedding',
     description: '',
@@ -33,7 +32,7 @@ const Menus: React.FC = () => {
       setLoading(true);
       setError(null);
       try {
-        const data = await menuService.getByEvent(eventId);
+        const data = await menuService.getAll();
         setMenus(data);
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : 'Failed to load menus';
@@ -44,11 +43,7 @@ const Menus: React.FC = () => {
       }
     };
     load();
-  }, [eventId]);
-
-  useEffect(() => {
-    setFormData((prev) => ({ ...prev, eventId }));
-  }, [eventId]);
+  }, []);
 
   const handleEdit = (menu: Menu) => {
     setEditingMenu(menu);
@@ -101,23 +96,14 @@ const Menus: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Food Menus</h1>
-          <p className="mt-2 text-gray-600">Manage your event catering menus</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <label className="text-sm text-gray-700">Event ID</label>
-          <input
-            type="number"
-            value={eventId}
-            onChange={(e) => setEventId(Number(e.target.value) || 1)}
-            className="w-24 px-3 py-2 rounded-md border border-gray-300"
-          />
+          <h1 className="text-3xl font-bold text-gray-900">Menu Catalog</h1>
+          <p className="mt-2 text-gray-600">Manage catering menu options that can be assigned to events</p>
         </div>
         <button
           onClick={() => {
             setEditingMenu(null);
             setFormData({
-              eventId,
+              eventId: null,
               name: '',
               category: 'Wedding',
               description: '',
@@ -265,7 +251,7 @@ const Menus: React.FC = () => {
               await menuService.create(formData);
               toast.success('Menu created successfully!');
             }
-            const refreshed = await menuService.getByEvent(eventId);
+            const refreshed = await menuService.getAll();
             setMenus(refreshed);
             setShowAddModal(false);
           } catch (e: unknown) {

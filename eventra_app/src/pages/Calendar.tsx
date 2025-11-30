@@ -1,18 +1,47 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { FiChevronLeft, FiChevronRight, FiCalendar, FiClock, FiMapPin } from 'react-icons/fi';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, addMonths, subMonths } from 'date-fns';
+import { toast } from 'react-toastify';
+
+type EventItem = {
+    id: number;
+    title: string;
+    date: string; // ISO from API
+    venue?: string;
+    color?: string;
+    ticketPrice?: number;
+};
 
 const Calendar: React.FC = () => {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [view, setView] = useState<'month' | 'week'>('month');
 
-    // Mock events data
-    const events = [
-        { id: 1, title: 'Corporate Conference', date: new Date(2025, 10, 25), time: '10:00 AM', venue: 'Grand Hall A', color: 'bg-blue-500' },
-        { id: 2, title: 'Wedding Reception', date: new Date(2025, 10, 28), time: '6:00 PM', venue: 'Garden Pavilion', color: 'bg-pink-500' },
-        { id: 3, title: 'Product Launch', date: new Date(2025, 10, 30), time: '2:00 PM', venue: 'Convention Center', color: 'bg-purple-500' },
-    ];
+    const [events, setEvents] = useState<EventItem[]>([]);
+
+    useEffect(() => {
+        const loadEvents = async () => {
+            try {
+                const { eventService } = await import('../services');
+                const data = await eventService.getAllEvents();
+                // Map to local type and assign colors deterministically
+                const palette = ['bg-blue-500','bg-pink-500','bg-purple-500','bg-emerald-500','bg-orange-500','bg-cyan-500'];
+                const mapped: EventItem[] = (data || []).map((e: any, idx: number) => ({
+                    id: e.id,
+                    title: e.title,
+                    date: e.date, // ISO string
+                    venue: e.venueName || 'N/A',
+                    color: palette[idx % palette.length],
+                    ticketPrice: e.ticketPrice
+                }));
+                setEvents(mapped);
+            } catch (error) {
+                console.error('Failed to load events for calendar:', error);
+                toast.error('Failed to load events');
+            }
+        };
+        loadEvents();
+    }, []);
 
     const monthStart = startOfMonth(currentDate);
     const monthEnd = endOfMonth(currentDate);
@@ -22,11 +51,10 @@ const Calendar: React.FC = () => {
     const nextMonth = () => setCurrentDate(addMonths(currentDate, 1));
 
     const getEventsForDay = (day: Date) => {
-        return events.filter(event =>
-            event.date.getDate() === day.getDate() &&
-            event.date.getMonth() === day.getMonth() &&
-            event.date.getFullYear() === day.getFullYear()
-        );
+        return events.filter(event => {
+            const d = new Date(event.date);
+            return d.getDate() === day.getDate() && d.getMonth() === day.getMonth() && d.getFullYear() === day.getFullYear();
+        });
     };
 
     return (
@@ -65,7 +93,7 @@ const Calendar: React.FC = () => {
             {/* Calendar Card */}
             <div className="bg-white rounded-xl shadow-soft-xl border border-gray-200 overflow-hidden">
                 {/* Calendar Header */}
-                <div className="bg-gradient-to-r from-primary-600 to-cyan-600 p-6">
+                <div className="bg-linear-to-r from-primary-600 to-cyan-600 p-6">
                     <div className="flex items-center justify-between">
                         <button
                             onClick={previousMonth}
@@ -124,7 +152,7 @@ const Calendar: React.FC = () => {
                                         {dayEvents.map(event => (
                                             <div
                                                 key={event.id}
-                                                className={`${event.color} text-white text-xs px-2 py-1 rounded truncate`}
+                                                className={`${event.color ?? 'bg-primary-500'} text-white text-xs px-2 py-1 rounded truncate`}
                                                 title={event.title}
                                             >
                                                 {event.title}
@@ -145,7 +173,10 @@ const Calendar: React.FC = () => {
                     <h3 className="text-lg font-semibold text-gray-900">Upcoming Events</h3>
                 </div>
                 <div className="space-y-3">
-                    {events.map((event, index) => (
+                    {events
+                        .filter(e => new Date(e.date) >= new Date())
+                        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                        .map((event, index) => (
                         <motion.div
                             key={event.id}
                             initial={{ opacity: 0, x: -20 }}
@@ -153,26 +184,30 @@ const Calendar: React.FC = () => {
                             transition={{ delay: index * 0.1 }}
                             className="flex items-center gap-4 p-4 rounded-lg border border-gray-200 hover:border-primary-300 hover:shadow-md transition-all cursor-pointer"
                         >
-                            <div className={`w-2 h-16 ${event.color} rounded-full`}></div>
+                            <div className={`w-2 h-16 ${event.color ?? 'bg-primary-500'} rounded-full`}></div>
                             <div className="flex-1">
                                 <h4 className="font-semibold text-gray-900">{event.title}</h4>
                                 <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
                                     <div className="flex items-center gap-1">
                                         <FiCalendar className="w-4 h-4" />
-                                        {format(event.date, 'MMM dd, yyyy')}
+                                        {format(new Date(event.date), 'MMM dd, yyyy')}
                                     </div>
                                     <div className="flex items-center gap-1">
                                         <FiClock className="w-4 h-4" />
-                                        {event.time}
+                                        {/* No time field from API yet */}
+                                        —
                                     </div>
                                     <div className="flex items-center gap-1">
                                         <FiMapPin className="w-4 h-4" />
-                                        {event.venue}
+                                        {event.venue ?? 'N/A'}
                                     </div>
                                 </div>
                             </div>
                         </motion.div>
                     ))}
+                    {events.filter(e => new Date(e.date) >= new Date()).length === 0 && (
+                        <div className="text-gray-600 text-sm">No upcoming events.</div>
+                    )}
                 </div>
             </div>
         </motion.div>

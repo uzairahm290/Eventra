@@ -3,7 +3,7 @@ import { apiService } from './api';
 
 export interface Menu {
   id: number;
-  eventId: number;
+  eventId?: number | null;  // Optional - menus can exist without event assignment
   name: string;
   category: string;
   description: string;
@@ -17,7 +17,7 @@ export interface Menu {
 }
 
 export interface CreateMenuDto {
-  eventId: number;
+  eventId?: number | null;  // Optional - menus are catalog items
   name: string;
   category: string;
   description: string;
@@ -32,6 +32,9 @@ export interface CreateMenuDto {
 const basePath = '/api/Menus';
 
 export const menuService = {
+  getAll: async (): Promise<Menu[]> => {
+    return apiService.get(`${basePath}`);
+  },
   getByEvent: async (eventId: number): Promise<Menu[]> => {
     return apiService.get(`${basePath}/event/${eventId}`);
   },
