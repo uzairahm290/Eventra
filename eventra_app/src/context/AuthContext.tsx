@@ -24,6 +24,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
@@ -48,7 +49,7 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
         setToken(savedToken);
         setUser(JSON.parse(savedUser));
         apiService.setToken(savedToken);
-      } catch (err) {
+      } catch {
         // If localStorage data is corrupted, clear it
         localStorage.removeItem('token');
         localStorage.removeItem('user');

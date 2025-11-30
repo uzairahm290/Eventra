@@ -9,7 +9,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 
 // Helper function to render avatar
-const renderAvatar = (user: any, size: 'small' | 'large' = 'small') => {
+const renderAvatar = (user: { firstName?: string; lastName?: string; profileImageBase64?: string } | null, size: 'small' | 'large' = 'small') => {
   const sizeClasses = size === 'small' ? 'w-8 h-8' : 'w-10 h-10';
   const textSizeClasses = size === 'small' ? 'text-sm' : 'text-base';
 

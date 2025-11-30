@@ -64,9 +64,13 @@ const AvatarUpload: React.FC<AvatarUploadProps> = ({ value, onChange }) => {
       onChange?.(dataUrl);
       setPreview(dataUrl);
       // Optional: store in localStorage for demo persistence
-      try { localStorage.setItem('eventra:avatar', dataUrl); } catch {}
-    } catch (err: any) {
-      setError(err.message || 'Could not process image');
+      try { 
+        localStorage.setItem('eventra:avatar', dataUrl); 
+      } catch {
+        // Ignore localStorage errors
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not process image');
     }
   };
 
