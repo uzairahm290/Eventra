@@ -7,7 +7,45 @@ const ForgotPassword: React.FC = () => {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  const [devToken, setDevToken] = useState<string | null>(null);
+  const [devUserId, setDevUserId] = useState<string | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
+
+  const handleReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    if (!devToken || !devUserId) {
+      setError('No reset token available. Submit your email first.');
+      return;
+    }
+    if (!newPassword || newPassword.length < 6) {
+      setError('Password must be at least 6 characters.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+    setLoading(true);
+    try {
+      await apiService.post('/Auth/ResetPassword', {
+        userId: devUserId,
+        token: devToken,
+        newPassword
+      });
+      toast.success('Password reset successfully. You can now sign in.');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to reset password.';
+      setError(msg);
+      toast.error(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,8 +59,15 @@ const ForgotPassword: React.FC = () => {
     setLoading(true);
 
     try {
-      await apiService.post('/Auth/ForgotPassword', { email });
+      const res = await apiService.post('/Auth/ForgotPassword', { email });
       setSent(true);
+      if (res && typeof res === 'object') {
+        // Backend returns { resetToken, userId } in dev; capture for inline reset
+        type ForgotPasswordResponse = { resetToken?: string; userId?: string };
+        const response = res as ForgotPasswordResponse;
+        setDevToken(response.resetToken ?? null);
+        setDevUserId(response.userId ?? null);
+      }
       toast.success('If an account with that email exists, a reset link has been sent.');
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to send reset link. Please try again later.';
@@ -34,7 +79,7 @@ const ForgotPassword: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-cyan-50 to-teal-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-blue-50 via-cyan-50 to-teal-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <h2 className="text-3xl font-bold text-gray-900 mb-2">Forgot your password?</h2>
@@ -47,6 +92,30 @@ const ForgotPassword: React.FC = () => {
               <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">
                 If an account with that email exists, we've sent a password reset link.
               </div>
+              {/* Development-only inline reset (no email needed) */}
+              {devToken && devUserId && (
+                <div className="mt-4 p-4 rounded-xl border border-gray-200 bg-white/70">
+                  <p className="text-sm text-gray-700 mb-3">No email flow configured. Use the dev token below to reset your password now.</p>
+                  <form onSubmit={handleReset} className="space-y-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+                      <input type="password" className="block w-full pl-3 pr-3 py-2 rounded-md border border-gray-300" value={newPassword} onChange={e=>setNewPassword(e.target.value)} required />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
+                      <input type="password" className="block w-full pl-3 pr-3 py-2 rounded-md border border-gray-300" value={confirmPassword} onChange={e=>setConfirmPassword(e.target.value)} required />
+                    </div>
+                    <button type="submit" disabled={loading} className="btn-primary w-full py-2">{loading ? 'Resetting...' : 'Reset Password'}</button>
+                    <details className="text-xs text-gray-500 mt-2 select-all">
+                      <summary className="cursor-pointer">Show dev token</summary>
+                      <div className="mt-1">
+                        <div><span className="font-medium">UserId:</span> {devUserId}</div>
+                        <div className="break-all"><span className="font-medium">Token:</span> {devToken}</div>
+                      </div>
+                    </details>
+                  </form>
+                </div>
+              )}
               <div className="text-center">
                 <Link to="/login" className="text-primary-600 hover:text-primary-500 font-medium">Back to sign in</Link>
               </div>

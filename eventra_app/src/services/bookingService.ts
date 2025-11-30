@@ -46,13 +46,40 @@ export interface UpdateBookingStatusRequest {
   cancellationReason?: string;
 }
 
+type BookingDto = { 
+  id: number; 
+  userId: string; 
+  eventId: number; 
+  bookingReference: string;
+  bookingDate: string; 
+  numberOfAttendees: number;
+  numberOfTickets: number;
+  totalAmount: number; 
+  amountPaid: number; 
+  status: number | string; 
+  paymentDate?: string;
+  paymentMethod?: string;
+  transactionId?: string;
+  qrCode?: string;
+  isCheckedIn: boolean;
+  checkInTime?: string;
+  specialRequests?: string;
+  cancellationReason?: string;
+  cancellationDate?: string;
+  isApprovedByAdmin?: boolean;
+  createdAt: string;
+  updatedAt?: string;
+  eventTitle?: string; 
+  venueName?: string;
+};
+
 class BookingService {
   async getAllBookings(): Promise<Booking[]> {
     const data = await apiService.get('/Bookings');
     return Array.isArray(data) ? data.map(this.mapFromDto) : [];
   }
   
-  private mapFromDto = (dto: any): Booking => {
+  private mapFromDto = (dto: BookingDto): Booking => {
     // Map status string to numeric enum value
     const mapStatusValue = (value: unknown): BookingStatus => {
       if (typeof value === 'number') return value as BookingStatus;

@@ -80,6 +80,11 @@ class ApiService {
 
     const data: AuthResponse = await response.json();
     this.token = data.token;
+    try {
+      localStorage.setItem('token', data.token);
+    } catch {
+      // Ignore localStorage errors in environments without storage
+    }
     return data;
   }
 
@@ -108,15 +113,30 @@ class ApiService {
 
     const data: AuthResponse = await response.json();
     this.token = data.token;
+    try {
+      localStorage.setItem('token', data.token);
+    } catch {
+      // Ignore localStorage errors in environments without storage
+    }
     return data;
   }
 
   setToken(token: string) {
     this.token = token;
+    try {
+      localStorage.setItem('token', token);
+    } catch {
+      // Ignore localStorage errors
+    }
   }
 
   clearToken() {
     this.token = null;
+    try {
+      localStorage.removeItem('token');
+    } catch {
+      // Ignore localStorage errors
+    }
   }
 
   private async parseJsonSafe(response: Response) {

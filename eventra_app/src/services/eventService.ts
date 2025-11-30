@@ -110,12 +110,21 @@ class EventService {
 
   async createEvent(eventData: CreateEventRequest): Promise<Event> {
     const dto = await apiService.post('/Events', eventData);
+    if (!dto) {
+      // If API returns no content, refetch list and return the most recent created approximation
+      const all = await this.getAllEvents();
+      return all[0];
+    }
     return this.mapFromDto(dto);
   }
 
   async updateEvent(eventData: UpdateEventRequest): Promise<Event> {
     const { id, ...updateData } = eventData;
     const dto = await apiService.put(`/Events/${id}`, updateData);
+    if (!dto) {
+      // Some APIs return 204 No Content on update; fetch the updated entity instead
+      return await this.getEventById(id);
+    }
     return this.mapFromDto(dto);
   }
 

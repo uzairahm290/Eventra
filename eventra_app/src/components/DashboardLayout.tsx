@@ -73,11 +73,12 @@ const DashboardLayout: React.FC = () => {
         const now = new Date();
         const weekAhead = new Date();
         weekAhead.setDate(now.getDate() + 7);
-        const upcoming = (events || []).filter((e: any) => {
+        type EventItem = { id: number; title: string; date: string };
+        const upcoming = (events || []).filter((e: EventItem) => {
           const d = new Date(e.date);
           return d >= now && d <= weekAhead;
-        }).sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime())
-          .map((e: any) => ({ id: e.id, title: e.title, date: e.date }));
+        }).sort((a: EventItem, b: EventItem) => new Date(a.date).getTime() - new Date(b.date).getTime())
+          .map((e: EventItem) => ({ id: e.id, title: e.title, date: e.date }));
         setUpcomingEvents(upcoming);
       } catch (err) {
         console.warn('Failed to load upcoming events for notifications:', err);

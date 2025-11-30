@@ -50,9 +50,13 @@ const Events: React.FC = () => {
   }, [openEditId, items]);
 
   const filtered = useMemo(() => {
+    const statusValue = filterStatus.trim().toLowerCase();
     return items.filter((e) => {
-      const matchText = `${e.title} ${getCategoryName(e.category)} ${e.location} ${e.organizerName || ''}`.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchStatus = filterStatus === 'all' ? true : getStatusName(e.status).toLowerCase() === filterStatus;
+      const matchText = `${e.title} ${getCategoryName(e.category)} ${e.location} ${e.organizerName || ''}`
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase());
+      const statusName = getStatusName(e.status).toLowerCase();
+      const matchStatus = statusValue === 'all' ? true : statusName === statusValue;
       return matchText && matchStatus;
     });
   }, [items, searchTerm, filterStatus]);
@@ -215,11 +219,12 @@ const Events: React.FC = () => {
                 className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none text-sm"
               >
                 <option value="all">All Status</option>
-                <option value="confirmed">Confirmed</option>
-                <option value="pending">Pending</option>
-                <option value="planned">Planned</option>
+                <option value="draft">Draft</option>
+                <option value="published">Published</option>
+                <option value="in progress">In Progress</option>
                 <option value="completed">Completed</option>
                 <option value="cancelled">Cancelled</option>
+                <option value="postponed">Postponed</option>
               </select>
             </div>
           </div>

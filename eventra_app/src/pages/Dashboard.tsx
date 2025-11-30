@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { FiCalendar, FiMapPin, FiUsers, FiDollarSign, FiTrendingUp, FiArrowUp } from 'react-icons/fi';
+import type { IconType } from 'react-icons';
 import { toast } from 'react-toastify';
 
 type EventItem = { id: number; title: string; date: string; venueName?: string; status?: number; maxAttendees?: number; currentAttendees?: number; };
 type BookingItem = { id: number; userId: string; bookingDate: string; totalAmount?: number; amountPaid?: number; };
 
 const Dashboard: React.FC = () => {
-  const [stats, setStats] = useState<Array<{name: string; value: string; change: string; trend: 'up' | 'down'; icon: any; color: string;}>>([]);
+  const [stats, setStats] = useState<Array<{name: string; value: string; change: string; trend: 'up' | 'down'; icon: IconType; color: string;}>>([]);
   const [recentEvents, setRecentEvents] = useState<EventItem[]>([]);
   const [upcomingBookings, setUpcomingBookings] = useState<Array<{ id: number; client: string; venue: string; date: string; amount: string }>>([]);
 
@@ -17,20 +18,22 @@ const Dashboard: React.FC = () => {
         // Events
         const events = await eventService.getAllEvents();
         const totalEvents = Array.isArray(events) ? events.length : 0;
-        const upcomingEvents = (events || []).filter((e: any) => new Date(e.date) >= new Date()).length;
+        type EventDTO = { id: number; title: string; date: string; createdAt?: string; venueName?: string; status?: number; maxAttendees?: number; currentAttendees?: number };
+        const upcomingEvents = (events || []).filter((e: EventDTO) => new Date(e.date) >= new Date()).length;
         const latestEvents: EventItem[] = (events || [])
-          .sort((a: any, b: any) => new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime())
+          .sort((a: EventDTO, b: EventDTO) => new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime())
           .slice(0, 5);
 
         setRecentEvents(latestEvents);
 
         // Bookings
         const bookings = await bookingService.getAllBookings();
+        type BookingDTO = { id: number; userId: string; bookingDate: string; totalAmount?: number };
         const upcoming = (bookings || [])
           .filter((b: BookingItem) => new Date(b.bookingDate) >= new Date())
           .sort((a: BookingItem, b: BookingItem) => new Date(a.bookingDate).getTime() - new Date(b.bookingDate).getTime())
           .slice(0, 5)
-          .map((b: any) => ({
+          .map((b: BookingDTO) => ({
             id: b.id,
             client: `User #${b.userId}`,
             venue: 'N/A',
@@ -40,8 +43,8 @@ const Dashboard: React.FC = () => {
         setUpcomingBookings(upcoming);
 
         // Stats (basic, derived from loaded data)
-        const totalRevenue = (bookings || []).reduce((sum: number, b: any) => sum + (b.totalAmount ?? 0), 0);
-        const totalClientsEst = new Set((bookings || []).map((b: any) => b.userId)).size;
+        const totalRevenue = (bookings || []).reduce((sum: number, b: BookingDTO) => sum + (b.totalAmount ?? 0), 0);
+        const totalClientsEst = new Set((bookings || []).map((b: BookingDTO) => b.userId)).size;
 
         setStats([
           { name: 'Total Events', value: String(totalEvents), change: `${upcomingEvents} upcoming`, trend: 'up', icon: FiCalendar, color: 'blue' },

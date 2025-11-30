@@ -72,18 +72,6 @@ const Venues: React.FC = () => {
     }
   };
 
-  const handleDeleteOld = async () => {
-    if (!deleteId) return;
-    try {
-      await venueService.deleteVenue(deleteId);
-      await loadVenues();
-    } catch (error) {
-      console.error('Failed to delete venue:', error);
-    } finally {
-      setDeleteId(null);
-    }
-  };
-
   const handleEdit = (venue: Venue) => {
     const mapped = {
       name: venue.name,
