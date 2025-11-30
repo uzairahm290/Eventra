@@ -128,7 +128,7 @@ class ApiService {
   }
 
   // Generic POST request
-  async post(endpoint: string, data?: any) {
+  async post(endpoint: string, data?: unknown) {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'POST',
       headers: this.getHeaders(),
@@ -143,7 +143,7 @@ class ApiService {
   }
 
   // Generic PUT request
-  async put(endpoint: string, data?: any) {
+  async put(endpoint: string, data?: unknown) {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'PUT',
       headers: this.getHeaders(),

@@ -21,11 +21,11 @@ const Profile: React.FC = () => {
       try {
         setLoading(true);
         const response = await apiService.get('/Profile');
-        setFirstName(response.firstName || '');
-        setLastName(response.secondName || '');
+        setFirstName(response.firstName || user?.firstName || '');
+        setLastName(response.secondName || user?.lastName || '');
         setUsername(response.userName || '');
-        setEmail(response.userMail || '');
-        setProfileImageBase64(response.profileImageBase64 || '');
+        setEmail(response.userMail || user?.email || '');
+        setProfileImageBase64(response.profileImageBase64 || user?.profileImageBase64 || '');
       } catch (error) {
         console.error('Failed to load profile:', error);
         setMessage({ 
@@ -40,7 +40,7 @@ const Profile: React.FC = () => {
     if (token) {
       loadProfile();
     }
-  }, [token]);
+  }, [token, user]);
 
   const handleSave = async () => {
     try {
