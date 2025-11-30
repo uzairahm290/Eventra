@@ -5,6 +5,6 @@
     <!-- Keep lockfile next to project file -->
     <NuGetLockFilePath>packages.lock.json</NuGetLockFilePath>
     <!-- Prevent implicit updates when locked mode is used -->
-    <RestoreLockedMode>true</RestoreLockedMode>
+    <RestoreLockedMode>false</RestoreLockedMode>
   </PropertyGroup>
 </Project>
