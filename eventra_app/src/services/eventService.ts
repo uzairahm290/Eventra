@@ -125,9 +125,15 @@ class EventService {
   private mapFromDto = (dto: unknown): Event => {
     const d = dto as Record<string, unknown>;
     // Map category/status strings to numeric enum values if needed
-    const mapEnum = (obj: Record<string, number>, value: unknown, fallback: number) => {
+    const mapEnumValue = (enumObj: Record<string, number | string>, value: unknown, fallback: number): number => {
       if (typeof value === 'number') return value;
-      if (typeof value === 'string' && value in obj) return obj[value as keyof typeof obj];
+      if (typeof value === 'string') {
+        // Check if string matches a key in the enum (e.g., "Conference" → 0)
+        const key = Object.keys(enumObj).find(k => k === value);
+        if (key && typeof enumObj[key] === 'number') {
+          return enumObj[key] as number;
+        }
+      }
       return fallback;
     };
 
@@ -140,8 +146,8 @@ class EventService {
       description: (d.description as string) ?? '',
       maxAttendees: d.maxAttendees as number,
       currentAttendees: (d.currentAttendees as number) ?? 0,
-      category: mapEnum(EventCategory as unknown as Record<string, number>, d.category, EventCategory.Other) as EventCategory,
-      status: mapEnum(EventStatus as unknown as Record<string, number>, d.status, EventStatus.Draft) as EventStatus,
+      category: mapEnumValue(EventCategory, d.category, EventCategory.Other) as EventCategory,
+      status: mapEnumValue(EventStatus, d.status, EventStatus.Draft) as EventStatus,
       venueId: (d.venueId as number) ?? undefined,
       imageUrl: (d.imageUrl as string) ?? undefined,
       ticketPrice: (d.ticketPrice as number) ?? undefined,

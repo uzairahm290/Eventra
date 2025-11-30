@@ -4,6 +4,16 @@ import Modal from '../components/Modal';
 import { eventService, EventCategory, EventStatus } from '../services';
 import type { Event } from '../services';
 
+// Helper to get category name from enum value
+const getCategoryName = (category: EventCategory): string => {
+  return Object.keys(EventCategory).find(key => EventCategory[key as keyof typeof EventCategory] === category) || 'Other';
+};
+
+// Helper to get status name from enum value
+const getStatusName = (status: EventStatus): string => {
+  return Object.keys(EventStatus).find(key => EventStatus[key as keyof typeof EventStatus] === status) || 'Draft';
+};
+
 const Events: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
@@ -12,16 +22,7 @@ const Events: React.FC = () => {
   const [viewId, setViewId] = useState<number | null>(null);
   const [items, setItems] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // Helper to get category name from enum value
-  const getCategoryName = (category: EventCategory): string => {
-    return Object.keys(EventCategory).find(key => EventCategory[key as keyof typeof EventCategory] === category) || 'Other';
-  };
-
-  // Helper to get status name from enum value
-  const getStatusName = (status: EventStatus): string => {
-    return Object.keys(EventStatus).find(key => EventStatus[key as keyof typeof EventStatus] === status) || 'Draft';
-  };
+  const [error, setError] = useState<string | null>(null);
 
   // Fetch events on mount
   useEffect(() => {
@@ -34,80 +35,17 @@ const Events: React.FC = () => {
       const events = await eventService.getAllEvents();
       setItems(events);
     } catch (error) {
-      console.error('Failed to load events:', error);
+      const msg = error instanceof Error ? error.message : 'Failed to load events';
+      setError(msg);
     } finally {
       setLoading(false);
     }
   };
 
-  /* Old static data - keeping for reference
-  const [itemsOld] = useState(() => ([
-    {
-      id: 1,
-      name: 'Corporate Gala 2025',
-      type: 'Corporate',
-      date: '2025-11-25',
-      time: '18:00 - 23:00',
-      venue: 'Grand Ballroom',
-      client: 'Tech Corp Inc.',
-      guests: 200,
-      status: 'Confirmed',
-      budget: '$15,000',
-    },
-    {
-      id: 2,
-      name: 'Johnson Wedding',
-      type: 'Wedding',
-      date: '2025-12-05',
-      time: '14:00 - 22:00',
-      venue: 'Garden Pavilion',
-      client: 'Sarah Johnson',
-      guests: 150,
-      status: 'Pending',
-      budget: '$12,000',
-    },
-    {
-      id: 3,
-      name: 'Tech Conference 2025',
-      type: 'Conference',
-      date: '2025-12-12',
-      time: '09:00 - 18:00',
-      venue: 'Convention Center',
-      client: 'Innovation Labs',
-      guests: 500,
-      status: 'Confirmed',
-      budget: '$35,000',
-    },
-    {
-      id: 4,
-      name: 'Birthday Bash',
-      type: 'Birthday',
-      date: '2025-11-30',
-      time: '19:00 - 23:00',
-      venue: 'Rooftop Terrace',
-      client: 'Michael Chen',
-      guests: 75,
-      status: 'Confirmed',
-      budget: '$5,500',
-    },
-    {
-      id: 5,
-      name: 'Charity Fundraiser',
-      type: 'Fundraiser',
-      date: '2025-12-20',
-      time: '17:00 - 21:00',
-      venue: 'Grand Ballroom',
-      client: 'Hope Foundation',
-      guests: 300,
-      status: 'Planned',
-      budget: '$20,000',
-    },
-  ]));
-  */
-
-  const currentEditing = useMemo(() =>
-    openEditId && openEditId !== 'new' ? items.find(e => e.id === openEditId) : null,
-  [openEditId, items]);
+  const currentEditing = useMemo(() => {
+    if (!openEditId || openEditId === 'new') return null;
+    return items.find(e => e.id === openEditId) || null;
+  }, [openEditId, items]);
 
   const filtered = useMemo(() => {
     return items.filter((e) => {
@@ -170,8 +108,8 @@ const Events: React.FC = () => {
       await loadEvents();
       setOpenEditId(null);
     } catch (error) {
-      console.error('Failed to save event:', error);
-      alert('Failed to save event');
+      const msg = error instanceof Error ? error.message : 'Failed to save event';
+      setError(msg);
     }
   };
 
@@ -277,6 +215,11 @@ const Events: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Error Banner */}
+      {error && (
+        <div className="card p-3 bg-red-50 text-red-700 text-sm">{error}</div>
+      )}
 
       {/* Events Table */}
       <div className="card overflow-hidden">
@@ -531,33 +474,34 @@ const Events: React.FC = () => {
 export default Events;
 
   type EventItem = {
-    id?: number;
     name: string;
-    type: string;
+    category: EventCategory;
     date: string;
-    time: string;
-    venue: string;
-    client: string;
+    endDate?: string;
+    location: string;
     guests: number;
-    status: string;
-    budget: string;
+    status: EventStatus;
+    description: string;
+    isFree: boolean;
+    ticketPrice?: number;
   };
 
   const EventForm: React.FC<{ initial?: Partial<Event>; onSave: (e: Partial<Event>) => void; onCancel: () => void }>
     = ({ initial, onSave, onCancel }) => {
     const [form, setForm] = useState<EventItem>({
       name: initial?.title ?? '',
-      type: 'Corporate', // Will be category in real API
+      category: initial?.category ?? EventCategory.Conference,
       date: initial?.date ?? new Date().toISOString().slice(0,10),
-      time: '09:00 - 18:00', // Not in Event model
-      venue: initial?.venueId?.toString() ?? '',
-      client: '', // Not in Event model
+      endDate: initial?.endDate ?? undefined,
+      location: initial?.location ?? '',
       guests: initial?.maxAttendees ?? 50,
-      status: 'Draft',
-      budget: initial?.ticketPrice?.toString() ?? '$0',
+      status: initial?.status ?? EventStatus.Draft,
+      description: initial?.description ?? '',
+      isFree: initial?.isFree ?? true,
+      ticketPrice: initial?.ticketPrice ?? undefined,
     });
 
-    const update = (key: keyof EventItem, value: string | number) => setForm(prev => ({ ...prev, [key]: value }));
+    const update = (key: keyof EventItem, value: string | number | boolean | undefined) => setForm(prev => ({ ...prev, [key]: value }));
 
     const handleSubmit = (e: React.FormEvent) => {
       e.preventDefault();
@@ -565,12 +509,14 @@ export default Events;
       const eventData: Partial<Event> = {
         title: form.name,
         date: form.date,
-        location: form.venue,
-        description: `${form.type} event`,
+        endDate: form.endDate,
+        location: form.location,
+        description: form.description,
         maxAttendees: form.guests,
-        category: EventCategory.Conference,
-        status: EventStatus.Draft,
-        isFree: true,
+        category: form.category,
+        status: form.status,
+        isFree: form.isFree,
+        ticketPrice: form.ticketPrice,
         requiresApproval: false,
         isPublic: true,
       };
@@ -585,9 +531,9 @@ export default Events;
             <input className="input-field" value={form.name} onChange={e=>update('name', e.target.value)} required />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Type</label>
-            <select className="input-field" value={form.type} onChange={e=>update('type', e.target.value)}>
-              {['Corporate','Wedding','Conference','Birthday','Fundraiser'].map(t=> <option key={t} value={t}>{t}</option>)}
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Category</label>
+            <select className="input-field" value={form.category} onChange={e=>update('category', Number(e.target.value))}>
+              {[EventCategory.Conference, EventCategory.Workshop, EventCategory.Seminar, EventCategory.Meetup, EventCategory.Concert, EventCategory.Exhibition, EventCategory.Wedding, EventCategory.Birthday, EventCategory.Corporate, EventCategory.Sports, EventCategory.Festival, EventCategory.Other].map(v=> <option key={v} value={v}>{getCategoryName(v)}</option>)}
             </select>
           </div>
           <div>
@@ -595,16 +541,12 @@ export default Events;
             <input type="date" className="input-field" value={form.date} onChange={e=>update('date', e.target.value)} />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Time</label>
-            <input className="input-field" value={form.time} onChange={e=>update('time', e.target.value)} />
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">End Date</label>
+            <input type="date" className="input-field" value={form.endDate ?? ''} onChange={e=>update('endDate', e.target.value)} />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Venue</label>
-            <input className="input-field" value={form.venue} onChange={e=>update('venue', e.target.value)} />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Client</label>
-            <input className="input-field" value={form.client} onChange={e=>update('client', e.target.value)} />
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Location</label>
+            <input className="input-field" value={form.location} onChange={e=>update('location', e.target.value)} />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Guests</label>
@@ -612,13 +554,27 @@ export default Events;
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Status</label>
-            <select className="input-field" value={form.status} onChange={e=>update('status', e.target.value)}>
-              {['Planned','Pending','Confirmed','Cancelled','Completed'].map(s=> <option key={s} value={s}>{s}</option>)}
+            <select className="input-field" value={form.status} onChange={e=>update('status', Number(e.target.value))}>
+              {[EventStatus.Draft, EventStatus.Published, EventStatus.InProgress, EventStatus.Completed, EventStatus.Cancelled, EventStatus.Postponed].map(s=> <option key={s} value={s}>{getStatusName(s)}</option>)}
             </select>
           </div>
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Budget</label>
-            <input className="input-field" value={form.budget} onChange={e=>update('budget', e.target.value)} />
+          <div className="md:col-span-2 grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Description</label>
+              <textarea className="input-field" value={form.description} onChange={e=>update('description', e.target.value)} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Pricing</label>
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-2 text-sm text-gray-700">
+                  <input type="checkbox" checked={form.isFree} onChange={e=>update('isFree', e.target.checked)} />
+                  Free Event
+                </label>
+                {!form.isFree && (
+                  <input type="number" className="input-field" placeholder="Ticket Price" value={form.ticketPrice ?? 0} onChange={e=>update('ticketPrice', Number(e.target.value))} />
+                )}
+              </div>
+            </div>
           </div>
         </div>
         <div className="flex items-center justify-end gap-3 pt-2">

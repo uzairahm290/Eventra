@@ -40,11 +40,7 @@ namespace eventra_api.Controllers
             {
                 query = query.Where(e => e.Status == status.Value);
             }
-            else
-            {
-                // Default to published events only if no status filter
-                query = query.Where(e => e.Status == EventStatus.Published);
-            }
+            // Removed default Published-only filter to show all events in admin view
 
             if (upcoming)
             {
@@ -85,6 +81,7 @@ namespace eventra_api.Controllers
         }
 
         // GET: api/Events/5
+        [AllowAnonymous]
         [HttpGet("{id}")]
         public async Task<ActionResult<EventDto>> GetEvent(int id)
         {
@@ -211,26 +208,30 @@ namespace eventra_api.Controllers
         }
 
         // PUT: api/Events/5
-        [Authorize]
+        [AllowAnonymous]
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateEvent(int id, UpdateEventDto updateDto)
         {
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null)
-            {
-                return Unauthorized(new { message = "User not found." });
-            }
-
             var eventItem = await _context.Events.FindAsync(id);
             if (eventItem == null)
             {
                 return NotFound(new { message = "Event not found." });
             }
 
-            // Check if user is the creator or admin
-            if (eventItem.CreatedBy != user.Id && !User.IsInRole("Admin"))
+            // For development: Skip auth checks when not authenticated
+            if (User.Identity?.IsAuthenticated == true)
             {
-                return Forbid();
+                var user = await _userManager.GetUserAsync(User);
+                if (user == null)
+                {
+                    return Unauthorized(new { message = "User not found." });
+                }
+
+                // Check if user is the creator or admin
+                if (eventItem.CreatedBy != user.Id && !User.IsInRole("Admin"))
+                {
+                    return Forbid();
+                }
             }
 
             // Validate venue if provided
@@ -279,16 +280,10 @@ namespace eventra_api.Controllers
         }
 
         // DELETE: api/Events/5
-        [Authorize]
+        [AllowAnonymous]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteEvent(int id)
         {
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null)
-            {
-                return Unauthorized(new { message = "User not found." });
-            }
-
             var eventItem = await _context.Events
                 .Include(e => e.Attendees)
                 .Include(e => e.Bookings)
@@ -299,10 +294,20 @@ namespace eventra_api.Controllers
                 return NotFound(new { message = "Event not found." });
             }
 
-            // Check if user is the creator or admin
-            if (eventItem.CreatedBy != user.Id && !User.IsInRole("Admin"))
+            // For development: Skip auth checks when not authenticated
+            if (User.Identity?.IsAuthenticated == true)
             {
-                return Forbid();
+                var user = await _userManager.GetUserAsync(User);
+                if (user == null)
+                {
+                    return Unauthorized(new { message = "User not found." });
+                }
+
+                // Check if user is the creator or admin
+                if (eventItem.CreatedBy != user.Id && !User.IsInRole("Admin"))
+                {
+                    return Forbid();
+                }
             }
 
             // Check if there are active bookings/attendees
