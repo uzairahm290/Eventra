@@ -96,44 +96,21 @@ if (app.Environment.IsDevelopment())
 // -------------------------
 // Development database seeding
 // -------------------------
-// Applies migrations and seeds an admin user and sample data when running in Development.
-static async Task SeedDevelopmentDataAsync(IServiceProvider rootProvider)
+// Applies migrations and seeds sample data when running in Development.
+if (app.Environment.IsDevelopment())
 {
-    using var scope = rootProvider.CreateScope();
+    using var scope = app.Services.CreateScope();
     var services = scope.ServiceProvider;
-    var env = services.GetRequiredService<IHostEnvironment>();
-    if (!env.IsDevelopment()) return;
-
-    var db = services.GetRequiredService<AppDbContext>();
-    await db.Database.MigrateAsync();
-
-    var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
-    var adminEmail = "dev@eventra.local";
-    if (userManager.Users.All(u => u.Email != adminEmail))
+    try
     {
-        var admin = new ApplicationUser
-        {
-            UserName = "devadmin",
-            Email = adminEmail,
-            FirstName = "Dev",
-            SecondName = "Admin",
-            DateRegistered = DateTime.UtcNow
-        };
-        await userManager.CreateAsync(admin, "Dev@12345!");
+        await DataSeeder.SeedDataAsync(services);
     }
-
-    if (!db.Events.Any())
+    catch (Exception ex)
     {
-        db.Events.AddRange(
-            new Event { Title = "Sample Meetup", Date = DateTime.UtcNow.AddDays(7), Location = "Main Hall", Description = "A sample meetup created for development.", MaxAttendees = 100 },
-            new Event { Title = "Product Launch", Date = DateTime.UtcNow.AddDays(21), Location = "Auditorium", Description = "Product launch demo event.", MaxAttendees = 250 }
-        );
-        await db.SaveChangesAsync();
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "An error occurred while seeding the database.");
     }
 }
-
-// Run seeding synchronously during startup (only in development)
-SeedDevelopmentDataAsync(app.Services).GetAwaiter().GetResult();
 
 app.UseHttpsRedirection();
 app.UseCors("AllowVite");
