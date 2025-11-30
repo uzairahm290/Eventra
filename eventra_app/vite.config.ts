@@ -10,9 +10,8 @@ export default defineConfig({
     port: 5173, // default Vite port
     proxy: {
       "/api": {
-        target: "https://localhost:7079", // <-- your ASP.NET API URL
-        changeOrigin: true,
-        secure: false
+        target: "http://localhost:5152", // switched to HTTP backend port
+        changeOrigin: true
       }
     } 
   }

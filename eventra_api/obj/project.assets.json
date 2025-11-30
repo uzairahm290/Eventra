@@ -4310,30 +4310,28 @@
       "Microsoft.EntityFrameworkCore >= 8.0.11",
       "Microsoft.EntityFrameworkCore.SqlServer >= 8.0.11",
       "Microsoft.EntityFrameworkCore.Tools >= 8.0.11",
-      "Swashbuckle.AspNetCore >= 8.1.4",
-      "Swashbuckle.AspNetCore.Swagger >= 8.1.4",
-      "Swashbuckle.AspNetCore.SwaggerUI >= 8.1.4"
+      "Swashbuckle.AspNetCore >= 8.1.4"
     ]
   },
   "packageFolders": {
-    "C:\\Users\\MY LAPTOP\\.nuget\\packages\\": {},
+    "C:\\Users\\uzair\\.nuget\\packages\\": {},
     "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\MY LAPTOP\\Desktop\\Eventra\\eventra_api\\eventra_api.csproj",
+      "projectUniqueName": "D:\\Eventra\\eventra_api\\eventra_api.csproj",
       "projectName": "eventra_api",
-      "projectPath": "C:\\Users\\MY LAPTOP\\Desktop\\Eventra\\eventra_api\\eventra_api.csproj",
-      "packagesPath": "C:\\Users\\MY LAPTOP\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\MY LAPTOP\\Desktop\\Eventra\\eventra_api\\obj\\",
+      "projectPath": "D:\\Eventra\\eventra_api\\eventra_api.csproj",
+      "packagesPath": "C:\\Users\\uzair\\.nuget\\packages\\",
+      "outputPath": "D:\\Eventra\\eventra_api\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
       ],
       "configFilePaths": [
-        "C:\\Users\\MY LAPTOP\\Desktop\\Eventra\\NuGet.Config",
-        "C:\\Users\\MY LAPTOP\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "D:\\Eventra\\NuGet.Config",
+        "C:\\Users\\uzair\\AppData\\Roaming\\NuGet\\NuGet.Config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
       ],
@@ -4356,7 +4354,8 @@
       },
       "restoreLockProperties": {
         "restorePackagesWithLockFile": "true",
-        "nuGetLockFilePath": "packages.lock.json"
+        "nuGetLockFilePath": "packages.lock.json",
+        "restoreLockedMode": true
       },
       "restoreAuditProperties": {
         "enableAudit": "true",
@@ -4391,14 +4390,6 @@
             "version": "[8.0.11, )"
           },
           "Swashbuckle.AspNetCore": {
-            "target": "Package",
-            "version": "[8.1.4, )"
-          },
-          "Swashbuckle.AspNetCore.Swagger": {
-            "target": "Package",
-            "version": "[8.1.4, )"
-          },
-          "Swashbuckle.AspNetCore.SwaggerUI": {
             "target": "Package",
             "version": "[8.1.4, )"
           }
