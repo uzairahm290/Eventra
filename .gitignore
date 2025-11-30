@@ -39,6 +39,11 @@ dist/
 .env.local
 .env.*.local
 
+# Configuration files with credentials
+**/appsettings.json
+**/appsettings.Development.json
+**/appsettings.Production.json
+
 # Package files
 *.nupkg
 *.snupkg
