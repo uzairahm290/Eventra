@@ -5,7 +5,7 @@ import Modal from '../components/Modal';
 const Venues: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
-  const [editingVenue, setEditingVenue] = useState<any>(null);
+  const [editingVenue, setEditingVenue] = useState<typeof formData | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [viewId, setViewId] = useState<number | null>(null);
   const [formData, setFormData] = useState({
@@ -75,8 +75,8 @@ const Venues: React.FC = () => {
     }
   };
 
-  const handleEdit = (venue: any) => {
-    setEditingVenue(venue);
+  const handleEdit = (venue: { id: number; name: string; address: string; capacity: number; pricePerHour: number; amenities: string[]; rating: number; image: string; status: string; bookings: number }) => {
+    setEditingVenue({ ...venue, capacity: venue.capacity.toString(), pricePerHour: venue.pricePerHour.toString(), amenities: venue.amenities.join(', ') });
     setFormData({
       name: venue.name,
       address: venue.address,

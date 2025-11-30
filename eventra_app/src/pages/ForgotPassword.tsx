@@ -23,7 +23,7 @@ const ForgotPassword: React.FC = () => {
       await new Promise((r) => setTimeout(r, 800));
       // In a real app, call the backend endpoint to send a reset link
       setSent(true);
-    } catch (err) {
+    } catch {
       setError('Failed to send reset link. Please try again later.');
     } finally {
       setLoading(false);

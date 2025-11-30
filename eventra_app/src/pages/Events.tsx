@@ -1,6 +1,8 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { FiPlus, FiSearch, FiFilter, FiCalendar, FiUsers, FiMapPin, FiEdit, FiTrash2, FiEye } from 'react-icons/fi';
 import Modal from '../components/Modal';
+import { eventService, EventCategory, EventStatus } from '../services';
+import type { Event } from '../services';
 
 const Events: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -8,7 +10,38 @@ const Events: React.FC = () => {
   const [openEditId, setOpenEditId] = useState<number | 'new' | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [viewId, setViewId] = useState<number | null>(null);
-  const [items, setItems] = useState(() => ([
+  const [items, setItems] = useState<Event[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Helper to get category name from enum value
+  const getCategoryName = (category: EventCategory): string => {
+    return Object.keys(EventCategory).find(key => EventCategory[key as keyof typeof EventCategory] === category) || 'Other';
+  };
+
+  // Helper to get status name from enum value
+  const getStatusName = (status: EventStatus): string => {
+    return Object.keys(EventStatus).find(key => EventStatus[key as keyof typeof EventStatus] === status) || 'Draft';
+  };
+
+  // Fetch events on mount
+  useEffect(() => {
+    loadEvents();
+  }, []);
+
+  const loadEvents = async () => {
+    try {
+      setLoading(true);
+      const events = await eventService.getAllEvents();
+      setItems(events);
+    } catch (error) {
+      console.error('Failed to load events:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* Old static data - keeping for reference
+  const [itemsOld] = useState(() => ([
     {
       id: 1,
       name: 'Corporate Gala 2025',
@@ -70,64 +103,124 @@ const Events: React.FC = () => {
       budget: '$20,000',
     },
   ]));
+  */
 
   const currentEditing = useMemo(() =>
     openEditId && openEditId !== 'new' ? items.find(e => e.id === openEditId) : null,
   [openEditId, items]);
 
   const filtered = useMemo(() => {
-    return items.filter(e => {
-      const matchText = `${e.name} ${e.type} ${e.venue} ${e.client}`.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchStatus = filterStatus === 'all' ? true : e.status.toLowerCase() === filterStatus;
+    return items.filter((e) => {
+      const matchText = `${e.title} ${getCategoryName(e.category)} ${e.location} ${e.organizerName || ''}`.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchStatus = filterStatus === 'all' ? true : getStatusName(e.status).toLowerCase() === filterStatus;
       return matchText && matchStatus;
     });
   }, [items, searchTerm, filterStatus]);
 
-  const handleSave = (data: any) => {
-    if (openEditId === 'new') {
-      setItems(prev => [{ ...data, id: Date.now() }, ...prev]);
-    } else if (typeof openEditId === 'number') {
-      setItems(prev => prev.map(e => e.id === openEditId ? { ...e, ...data } : e));
+  const handleSave = async (data: Partial<Event>) => {
+    try {
+      // Validate required fields
+      if (!data.title || !data.date || !data.location || !data.description || data.maxAttendees === undefined || data.category === undefined || data.status === undefined) {
+        console.error('Missing required fields');
+        return;
+      }
+
+      if (openEditId === 'new') {
+        await eventService.createEvent({
+          title: data.title,
+          date: data.date,
+          location: data.location,
+          description: data.description,
+          maxAttendees: data.maxAttendees,
+          category: data.category,
+          status: data.status,
+          isFree: data.isFree ?? true,
+          requiresApproval: data.requiresApproval ?? false,
+          isPublic: data.isPublic ?? true,
+          endDate: data.endDate,
+          venueId: data.venueId,
+          imageUrl: data.imageUrl,
+          ticketPrice: data.ticketPrice,
+          organizerName: data.organizerName,
+          organizerEmail: data.organizerEmail,
+          organizerPhone: data.organizerPhone,
+        });
+      } else if (typeof openEditId === 'number') {
+        await eventService.updateEvent({
+          id: openEditId,
+          title: data.title,
+          date: data.date,
+          location: data.location,
+          description: data.description,
+          maxAttendees: data.maxAttendees,
+          category: data.category,
+          status: data.status,
+          isFree: data.isFree ?? true,
+          requiresApproval: data.requiresApproval ?? false,
+          isPublic: data.isPublic ?? true,
+          endDate: data.endDate,
+          venueId: data.venueId,
+          imageUrl: data.imageUrl,
+          ticketPrice: data.ticketPrice,
+          organizerName: data.organizerName,
+          organizerEmail: data.organizerEmail,
+          organizerPhone: data.organizerPhone,
+        });
+      }
+      await loadEvents();
+      setOpenEditId(null);
+    } catch (error) {
+      console.error('Failed to save event:', error);
+      alert('Failed to save event');
     }
-    setOpenEditId(null);
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (deleteId) {
-      setItems(prev => prev.filter(e => e.id !== deleteId));
-      setDeleteId(null);
+      try {
+        await eventService.deleteEvent(deleteId);
+        await loadEvents();
+        setDeleteId(null);
+      } catch (error) {
+        console.error('Failed to delete event:', error);
+        alert('Failed to delete event');
+      }
     }
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: EventStatus) => {
     switch (status) {
-      case 'Confirmed':
+      case EventStatus.Published:
         return 'bg-green-100 text-green-800';
-      case 'Pending':
+      case EventStatus.Draft:
         return 'bg-yellow-100 text-yellow-800';
-      case 'Planned':
+      case EventStatus.InProgress:
         return 'bg-blue-100 text-blue-800';
-      case 'Cancelled':
+      case EventStatus.Cancelled:
         return 'bg-red-100 text-red-800';
-      case 'Completed':
+      case EventStatus.Completed:
         return 'bg-gray-100 text-gray-800';
+      case EventStatus.Postponed:
+        return 'bg-orange-100 text-orange-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case 'Corporate':
+  const getTypeColor = (category: EventCategory) => {
+    switch (category) {
+      case EventCategory.Corporate:
         return 'bg-blue-50 text-blue-700';
-      case 'Wedding':
+      case EventCategory.Wedding:
         return 'bg-pink-50 text-pink-700';
-      case 'Conference':
+      case EventCategory.Conference:
         return 'bg-indigo-50 text-indigo-700';
-      case 'Birthday':
+      case EventCategory.Birthday:
         return 'bg-orange-50 text-orange-700';
-      case 'Fundraiser':
+      case EventCategory.Festival:
         return 'bg-green-50 text-green-700';
+      case EventCategory.Workshop:
+        return 'bg-purple-50 text-purple-700';
       default:
         return 'bg-gray-50 text-gray-700';
     }
@@ -218,63 +311,83 @@ const Events: React.FC = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filtered.map((event) => (
-                <tr key={event.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">{event.name}</div>
-                      <div className="flex items-center mt-1">
-                        <span className={`text-xs px-2 py-1 rounded-full font-medium ${getTypeColor(event.type)}`}>
-                          {event.type}
-                        </span>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center text-sm text-gray-900">
-                      <FiCalendar className="mr-2 h-4 w-4 text-gray-400" />
-                      <div>
-                        <div>{event.date}</div>
-                        <div className="text-xs text-gray-500">{event.time}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center text-sm text-gray-900">
-                      <FiMapPin className="mr-2 h-4 w-4 text-gray-400" />
-                      {event.venue}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{event.client}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center text-sm text-gray-900">
-                      <FiUsers className="mr-2 h-4 w-4 text-gray-400" />
-                      {event.guests}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(event.status)}`}>
-                      {event.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {event.budget}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex items-center justify-end space-x-2">
-                      <button onClick={() => setViewId(event.id)} className="text-blue-600 hover:text-blue-800 p-2 rounded-lg hover:bg-blue-50">
-                        <FiEye className="h-4 w-4" />
-                      </button>
-                      <button onClick={() => setOpenEditId(event.id)} className="text-green-600 hover:text-green-800 p-2 rounded-lg hover:bg-green-50">
-                        <FiEdit className="h-4 w-4" />
-                      </button>
-                      <button onClick={() => setDeleteId(event.id)} className="text-red-600 hover:text-red-800 p-2 rounded-lg hover:bg-red-50">
-                        <FiTrash2 className="h-4 w-4" />
-                      </button>
-                    </div>
+              {loading ? (
+                <tr>
+                  <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
+                    Loading events...
                   </td>
                 </tr>
-              ))}
+              ) : filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
+                    No events found
+                  </td>
+                </tr>
+              ) : (
+                filtered.map((event) => (
+                  <tr key={event.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">{event.title}</div>
+                        <div className="flex items-center mt-1">
+                          <span className={`text-xs px-2 py-1 rounded-full font-medium ${getTypeColor(event.category)}`}>
+                            {getCategoryName(event.category)}
+                          </span>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center text-sm text-gray-900">
+                        <FiCalendar className="mr-2 h-4 w-4 text-gray-400" />
+                        <div>
+                          <div>{new Date(event.date).toLocaleDateString()}</div>
+                          {event.endDate && (
+                            <div className="text-xs text-gray-500">
+                              to {new Date(event.endDate).toLocaleDateString()}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center text-sm text-gray-900">
+                        <FiMapPin className="mr-2 h-4 w-4 text-gray-400" />
+                        {event.location}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {event.organizerName || 'N/A'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center text-sm text-gray-900">
+                        <FiUsers className="mr-2 h-4 w-4 text-gray-400" />
+                        {event.currentAttendees}/{event.maxAttendees}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(event.status)}`}>
+                        {getStatusName(event.status)}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {event.isFree ? 'Free' : `$${event.ticketPrice?.toFixed(2) || '0.00'}`}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <div className="flex items-center justify-end space-x-2">
+                        <button onClick={() => setViewId(event.id)} className="text-blue-600 hover:text-blue-800 p-2 rounded-lg hover:bg-blue-50">
+                          <FiEye className="h-4 w-4" />
+                        </button>
+                        <button onClick={() => setOpenEditId(event.id)} className="text-green-600 hover:text-green-800 p-2 rounded-lg hover:bg-green-50">
+                          <FiEdit className="h-4 w-4" />
+                        </button>
+                        <button onClick={() => setDeleteId(event.id)} className="text-red-600 hover:text-red-800 p-2 rounded-lg hover:bg-red-50">
+                          <FiTrash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -336,13 +449,13 @@ const Events: React.FC = () => {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Event Name</label>
-                  <p className="text-base font-semibold text-gray-900">{event.name}</p>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">Title</label>
+                  <p className="text-base font-semibold text-gray-900">{event.title}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Type</label>
-                  <span className={`inline-block text-sm px-3 py-1 rounded-full font-medium ${getTypeColor(event.type)}`}>
-                    {event.type}
+                  <label className="block text-sm font-medium text-gray-500 mb-1">Category</label>
+                  <span className={`inline-block text-sm px-3 py-1 rounded-full font-medium bg-purple-100 text-purple-800`}>
+                    {getCategoryName(event.category)}
                   </span>
                 </div>
                 <div>
@@ -350,20 +463,20 @@ const Events: React.FC = () => {
                   <p className="text-base text-gray-900">{event.date}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Time</label>
-                  <p className="text-base text-gray-900">{event.time}</p>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">End Date</label>
+                  <p className="text-base text-gray-900">{event.endDate || 'Same day'}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Venue</label>
-                  <p className="text-base text-gray-900">{event.venue}</p>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">Location</label>
+                  <p className="text-base text-gray-900">{event.location}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Client</label>
-                  <p className="text-base text-gray-900">{event.client}</p>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">Organizer</label>
+                  <p className="text-base text-gray-900">{event.organizerName || 'N/A'}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Guests</label>
-                  <p className="text-base text-gray-900">{event.guests}</p>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">Max Attendees</label>
+                  <p className="text-base text-gray-900">{event.maxAttendees}</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">Status</label>
@@ -372,8 +485,8 @@ const Events: React.FC = () => {
                   </span>
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Budget</label>
-                  <p className="text-lg font-bold text-gray-900">{event.budget}</p>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">Description</label>
+                  <p className="text-sm text-gray-900">{event.description}</p>
                 </div>
               </div>
               <div className="flex justify-end pt-4">
@@ -430,25 +543,38 @@ export default Events;
     budget: string;
   };
 
-  const EventForm: React.FC<{ initial?: EventItem; onSave: (e: EventItem) => void; onCancel: () => void }>
+  const EventForm: React.FC<{ initial?: Partial<Event>; onSave: (e: Partial<Event>) => void; onCancel: () => void }>
     = ({ initial, onSave, onCancel }) => {
     const [form, setForm] = useState<EventItem>({
-      name: initial?.name ?? '',
-      type: initial?.type ?? 'Corporate',
+      name: initial?.title ?? '',
+      type: 'Corporate', // Will be category in real API
       date: initial?.date ?? new Date().toISOString().slice(0,10),
-      time: initial?.time ?? '09:00 - 18:00',
-      venue: initial?.venue ?? '',
-      client: initial?.client ?? '',
-      guests: initial?.guests ?? 50,
-      status: initial?.status ?? 'Planned',
-      budget: initial?.budget ?? '$0',
+      time: '09:00 - 18:00', // Not in Event model
+      venue: initial?.venueId?.toString() ?? '',
+      client: '', // Not in Event model
+      guests: initial?.maxAttendees ?? 50,
+      status: 'Draft',
+      budget: initial?.ticketPrice?.toString() ?? '$0',
     });
 
-    const update = (key: keyof EventItem, value: any) => setForm(prev => ({ ...prev, [key]: value }));
+    const update = (key: keyof EventItem, value: string | number) => setForm(prev => ({ ...prev, [key]: value }));
 
     const handleSubmit = (e: React.FormEvent) => {
       e.preventDefault();
-      onSave(form);
+      // Convert form to Event format - this is a simplified form, real implementation would map properly
+      const eventData: Partial<Event> = {
+        title: form.name,
+        date: form.date,
+        location: form.venue,
+        description: `${form.type} event`,
+        maxAttendees: form.guests,
+        category: EventCategory.Conference,
+        status: EventStatus.Draft,
+        isFree: true,
+        requiresApproval: false,
+        isPublic: true,
+      };
+      onSave(eventData);
     };
 
     return (
