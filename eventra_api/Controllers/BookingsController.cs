@@ -22,6 +22,37 @@ namespace eventra_api.Controllers
             _userManager = userManager;
         }
 
+        // GET: api/Bookings
+        [AllowAnonymous]
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<BookingDto>>> GetAllBookings()
+        {
+            var bookings = await _context.Bookings
+                .Include(b => b.Event)
+                .Include(b => b.User)
+                .OrderByDescending(b => b.CreatedAt)
+                .Select(b => new BookingDto
+                {
+                    Id = b.Id,
+                    EventId = b.EventId,
+                    EventTitle = b.Event.Title,
+                    EventDate = b.Event.Date,
+                    UserId = b.UserId,
+                    UserName = b.User.UserName ?? "",
+                    BookingReference = b.BookingReference,
+                    BookingDate = b.BookingDate,
+                    Status = b.Status.ToString(),
+                    NumberOfTickets = b.NumberOfTickets,
+                    TotalAmount = b.TotalAmount,
+                    AmountPaid = b.AmountPaid,
+                    IsCheckedIn = b.IsCheckedIn,
+                    QRCode = b.QRCode
+                })
+                .ToListAsync();
+
+            return Ok(bookings);
+        }
+
         // GET: api/Bookings/my-bookings
         [HttpGet("my-bookings")]
         public async Task<ActionResult<IEnumerable<BookingDto>>> GetMyBookings()
@@ -144,10 +175,15 @@ namespace eventra_api.Controllers
         }
 
         // POST: api/Bookings
+        [AllowAnonymous]
         [HttpPost]
         public async Task<ActionResult<BookingDto>> CreateBooking(CreateBookingDto createDto)
         {
-            var user = await _userManager.GetUserAsync(User);
+            // For development: use first user if not authenticated
+            var user = User.Identity?.IsAuthenticated == true 
+                ? await _userManager.GetUserAsync(User) 
+                : await _userManager.Users.FirstOrDefaultAsync();
+            
             if (user == null)
             {
                 return Unauthorized(new { message = "User not found." });
@@ -314,15 +350,10 @@ namespace eventra_api.Controllers
         }
 
         // DELETE: api/Bookings/5
+        [AllowAnonymous]
         [HttpDelete("{id}")]
         public async Task<IActionResult> CancelBooking(int id)
         {
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null)
-            {
-                return Unauthorized(new { message = "User not found." });
-            }
-
             var booking = await _context.Bookings
                 .Include(b => b.Event)
                 .FirstOrDefaultAsync(b => b.Id == id);
@@ -332,10 +363,20 @@ namespace eventra_api.Controllers
                 return NotFound(new { message = "Booking not found." });
             }
 
-            // Check if user owns this booking or is admin
-            if (booking.UserId != user.Id)
+            // For development: Skip auth checks when not authenticated
+            if (User.Identity?.IsAuthenticated == true)
             {
-                return Forbid();
+                var user = await _userManager.GetUserAsync(User);
+                if (user == null)
+                {
+                    return Unauthorized(new { message = "User not found." });
+                }
+
+                // Check if user owns this booking or is admin
+                if (booking.UserId != user.Id)
+                {
+                    return Forbid();
+                }
             }
 
             if (booking.Status == BookingStatus.Cancelled)
