@@ -6,6 +6,8 @@ const Events: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [openEditId, setOpenEditId] = useState<number | 'new' | null>(null);
+  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [viewId, setViewId] = useState<number | null>(null);
   const [items, setItems] = useState(() => ([
     {
       id: 1,
@@ -90,8 +92,11 @@ const Events: React.FC = () => {
     setOpenEditId(null);
   };
 
-  const handleDelete = (id: number) => {
-    setItems(prev => prev.filter(e => e.id !== id));
+  const handleDelete = () => {
+    if (deleteId) {
+      setItems(prev => prev.filter(e => e.id !== deleteId));
+      setDeleteId(null);
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -257,13 +262,13 @@ const Events: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex items-center justify-end space-x-2">
-                      <button className="text-blue-600 hover:text-blue-800 p-2 rounded-lg hover:bg-blue-50">
+                      <button onClick={() => setViewId(event.id)} className="text-blue-600 hover:text-blue-800 p-2 rounded-lg hover:bg-blue-50">
                         <FiEye className="h-4 w-4" />
                       </button>
                       <button onClick={() => setOpenEditId(event.id)} className="text-green-600 hover:text-green-800 p-2 rounded-lg hover:bg-green-50">
                         <FiEdit className="h-4 w-4" />
                       </button>
-                      <button onClick={() => handleDelete(event.id)} className="text-red-600 hover:text-red-800 p-2 rounded-lg hover:bg-red-50">
+                      <button onClick={() => setDeleteId(event.id)} className="text-red-600 hover:text-red-800 p-2 rounded-lg hover:bg-red-50">
                         <FiTrash2 className="h-4 w-4" />
                       </button>
                     </div>
@@ -316,6 +321,95 @@ const Events: React.FC = () => {
           onCancel={() => setOpenEditId(null)}
           onSave={handleSave}
         />
+      </Modal>
+
+      {/* View Modal */}
+      <Modal
+        open={viewId !== null}
+        onClose={() => setViewId(null)}
+        title="Event Details"
+        maxWidthClass="max-w-2xl"
+      >
+        {viewId && items.find(e => e.id === viewId) && (() => {
+          const event = items.find(e => e.id === viewId)!;
+          return (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">Event Name</label>
+                  <p className="text-base font-semibold text-gray-900">{event.name}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">Type</label>
+                  <span className={`inline-block text-sm px-3 py-1 rounded-full font-medium ${getTypeColor(event.type)}`}>
+                    {event.type}
+                  </span>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">Date</label>
+                  <p className="text-base text-gray-900">{event.date}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">Time</label>
+                  <p className="text-base text-gray-900">{event.time}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">Venue</label>
+                  <p className="text-base text-gray-900">{event.venue}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">Client</label>
+                  <p className="text-base text-gray-900">{event.client}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">Guests</label>
+                  <p className="text-base text-gray-900">{event.guests}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">Status</label>
+                  <span className={`inline-block text-sm px-3 py-1 rounded-full font-semibold ${getStatusColor(event.status)}`}>
+                    {event.status}
+                  </span>
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-500 mb-1">Budget</label>
+                  <p className="text-lg font-bold text-gray-900">{event.budget}</p>
+                </div>
+              </div>
+              <div className="flex justify-end pt-4">
+                <button onClick={() => setViewId(null)} className="btn-primary">
+                  Close
+                </button>
+              </div>
+            </div>
+          );
+        })()}
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        open={deleteId !== null}
+        onClose={() => setDeleteId(null)}
+        title="Confirm Delete"
+        maxWidthClass="max-w-md"
+      >
+        <div className="space-y-4">
+          <p className="text-gray-700">Are you sure you want to delete this event? This action cannot be undone.</p>
+          <div className="flex justify-end space-x-3 pt-2">
+            <button
+              onClick={() => setDeleteId(null)}
+              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleDelete}
+              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+            >
+              Delete
+            </button>
+          </div>
+        </div>
       </Modal>
     </div>
   );
