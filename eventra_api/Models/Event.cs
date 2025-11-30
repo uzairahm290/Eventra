@@ -1,76 +1,87 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
 
-namespace eventra_api.Models
+namespace eventra_api.Models;
+
+public partial class Event
 {
-    public class Event
-    {
-        public int Id { get; set; }
+    [Key]
+    public int Id { get; set; }
 
-        [Required]
-        [MaxLength(200)]
-        public string Title { get; set; } = string.Empty;
+    [Required]
+    [StringLength(200)]
+    public string Title { get; set; } = null!;
 
-        [Required]
-        public DateTime Date { get; set; }
+    [Required]
+    public DateTime Date { get; set; }
 
-        public DateTime? EndDate { get; set; }
+    public DateTime? EndDate { get; set; }
 
-        [Required]
-        [MaxLength(300)]
-        public string Location { get; set; } = string.Empty;
+    [Required]
+    [StringLength(300)]
+    public string Location { get; set; } = null!;
 
-        [Required]
-        [MaxLength(2000)]
-        public string Description { get; set; } = string.Empty;
+    [Required]
+    [StringLength(2000)]
+    public string Description { get; set; } = null!;
 
-        [Range(1, 100000)]
-        public int MaxAttendees { get; set; }
+    [Required]
+    public int MaxAttendees { get; set; }
 
-        public int CurrentAttendees { get; set; } = 0;
+    public int CurrentAttendees { get; set; } = 0;
 
-        public EventCategory Category { get; set; } = EventCategory.Other;
+    [Required]
+    public EventCategory Category { get; set; }
 
-        public EventStatus Status { get; set; } = EventStatus.Draft;
+    [Required]
+    public EventStatus Status { get; set; } = EventStatus.Draft;
 
-        public int? VenueId { get; set; }
+    // Venue Information
+    public int? VenueId { get; set; }
+    public virtual Venue? Venue { get; set; }
 
-        [MaxLength(500)]
-        public string? ImageUrl { get; set; }
+    // Pricing
+    [StringLength(500)]
+    public string? ImageUrl { get; set; }
 
-        [Range(0, 999999.99)]
-        public decimal? TicketPrice { get; set; }
+    [Column(TypeName = "decimal(18,2)")]
+    public decimal? TicketPrice { get; set; }
 
-        public bool IsFree { get; set; } = true;
+    public bool IsFree { get; set; } = false;
 
-        public bool RequiresApproval { get; set; } = false;
+    // Registration Settings
+    public bool RequiresApproval { get; set; } = false;
+    public bool IsPublic { get; set; } = true;
 
-        public bool IsPublic { get; set; } = true;
+    // Organizer Information
+    [StringLength(100)]
+    public string? OrganizerName { get; set; }
 
-        [MaxLength(100)]
-        public string? OrganizerName { get; set; }
+    [StringLength(100)]
+    public string? OrganizerEmail { get; set; }
 
-        [EmailAddress]
-        [MaxLength(100)]
-        public string? OrganizerEmail { get; set; }
+    [StringLength(50)]
+    public string? OrganizerPhone { get; set; }
 
-        [MaxLength(50)]
-        public string? OrganizerPhone { get; set; }
+    // Audit Fields
+    [Required]
+    [StringLength(450)]
+    public string CreatedBy { get; set; } = null!;
 
-        [Required]
-        public string CreatedBy { get; set; } = string.Empty;
+    public virtual ApplicationUser Creator { get; set; } = null!;
 
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    [Required]
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-        public string? UpdatedBy { get; set; }
+    public string? UpdatedBy { get; set; }
+    public DateTime? UpdatedAt { get; set; }
 
-        public DateTime? UpdatedAt { get; set; }
-
-        // Navigation properties
-        public Venue? Venue { get; set; }
-        public ApplicationUser Creator { get; set; } = null!;
-        public ICollection<EventAttendee> Attendees { get; set; } = new List<EventAttendee>();
-        public ICollection<Menu> Menus { get; set; } = new List<Menu>();
-        public ICollection<Booking> Bookings { get; set; } = new List<Booking>();
-        public ICollection<Notification> Notifications { get; set; } = new List<Notification>();
-    }
+    // Navigation Properties
+    public virtual ICollection<EventAttendee> Attendees { get; set; } = new List<EventAttendee>();
+    public virtual ICollection<Menu> Menus { get; set; } = new List<Menu>();
+    public virtual ICollection<Booking> Bookings { get; set; } = new List<Booking>();
+    public virtual ICollection<Notification> Notifications { get; set; } = new List<Notification>();
 }

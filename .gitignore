@@ -1,13 +1,45 @@
+# Visual Studio
 .vs/
-# Visual Studio build outputs
-bin/
-obj/
+.vscode/
+
+# .NET build outputs
+**/bin/
+**/obj/
+**/out/
+
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa]rm/
+[Aa]rm64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
 
 # Node modules (frontend)
 eventra_app/node_modules/
+node_modules/
 
 # Vite / build outputs
 dist/
+*.local
 
 # Environment files
 .env
+.env.local
+.env.*.local
+
+# Package files
+*.nupkg
+*.snupkg
+packages/
