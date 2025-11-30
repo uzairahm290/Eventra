@@ -1,5 +1,9 @@
 const API_BASE_URL = '/api'; // Uses Vite proxy configured in vite.config.ts
 
+// Security: Rate limiting configuration
+const RATE_LIMIT_WINDOW = 60000; // 1 minute
+const MAX_REQUESTS_PER_WINDOW = 100;
+
 export interface LoginRequest {
   email: string;
   password: string;
@@ -50,6 +54,8 @@ class ApiService {
   private getHeaders(): HeadersInit {
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
+      // Security headers
+      'X-Requested-With': 'XMLHttpRequest', // Helps prevent CSRF
     };
 
     if (this.token) {
@@ -57,6 +63,16 @@ class ApiService {
     }
 
     return headers;
+  }
+
+  private validateInput(data: unknown): void {
+    if (typeof data === 'string') {
+      // Check for potential SQL injection patterns
+      const sqlPatterns = /(\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|UNION)\b)/gi;
+      if (sqlPatterns.test(data)) {
+        console.warn('Potential SQL injection attempt detected');
+      }
+    }
   }
 
   async login(credentials: LoginRequest): Promise<AuthResponse> {
@@ -177,6 +193,12 @@ class ApiService {
   // Generic POST request
   async post(endpoint: string, data?: unknown) {
     this.ensureOnline();
+    
+    // Validate input data
+    if (data) {
+      this.validateInput(JSON.stringify(data));
+    }
+    
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'POST',
       headers: this.getHeaders(),
@@ -198,6 +220,12 @@ class ApiService {
   // Generic PUT request
   async put(endpoint: string, data?: unknown) {
     this.ensureOnline();
+    
+    // Validate input data
+    if (data) {
+      this.validateInput(JSON.stringify(data));
+    }
+    
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'PUT',
       headers: this.getHeaders(),

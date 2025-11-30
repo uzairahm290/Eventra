@@ -60,8 +60,31 @@ builder.Services.AddAuthentication(options =>
 });
 
 
-// Add services for Controllers
-builder.Services.AddControllers();
+// Add services for Controllers with JSON options
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        // Prevent reference loops
+        options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+        // Limit max depth to prevent stack overflow attacks
+        options.JsonSerializerOptions.MaxDepth = 32;
+    });
+
+// Add model validation
+builder.Services.Configure<ApiBehaviorOptions>(options =>
+{
+    // Automatic model state validation
+    options.InvalidModelStateResponseFactory = context =>
+    {
+        var errors = context.ModelState
+            .Where(e => e.Value?.Errors.Count > 0)
+            .ToDictionary(
+                kvp => kvp.Key,
+                kvp => kvp.Value?.Errors.Select(e => e.ErrorMessage).ToArray()
+            );
+        return new BadRequestObjectResult(new { errors });
+    };
+});
 
 // Add services for Swagger/OpenAPI documentation
 builder.Services.AddEndpointsApiExplorer();
@@ -115,6 +138,23 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseCors("AllowVite");
+
+// Add security headers
+app.Use(async (context, next) =>
+{
+    // Prevent clickjacking
+    context.Response.Headers.Append("X-Frame-Options", "DENY");
+    // Prevent MIME type sniffing
+    context.Response.Headers.Append("X-Content-Type-Options", "nosniff");
+    // Enable XSS protection
+    context.Response.Headers.Append("X-XSS-Protection", "1; mode=block");
+    // Referrer policy
+    context.Response.Headers.Append("Referrer-Policy", "strict-origin-when-cross-origin");
+    // Content Security Policy
+    context.Response.Headers.Append("Content-Security-Policy", "default-src 'self'; frame-ancestors 'none';");
+    
+    await next();
+});
 
 // IMPORTANT: UseAuthentication must come before UseAuthorization
 app.UseAuthentication(); // This now uses your JWT setup
