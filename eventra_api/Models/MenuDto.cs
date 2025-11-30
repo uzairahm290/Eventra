@@ -50,4 +50,10 @@ namespace eventra_api.Models
         public string? AllergenInfo { get; set; }
         public bool IsAvailable { get; set; }
     }
+
+    // DTO to assign existing menus to an event
+    public class AssignMenusDto
+    {
+        public List<int> MenuIds { get; set; } = new List<int>();
+    }
 }

@@ -29,6 +29,7 @@ namespace eventra_api.Controllers
         {
             var bookings = await _context.Bookings
                 .Include(b => b.Event)
+                    .ThenInclude(e => e.Venue)
                 .Include(b => b.User)
                 .OrderByDescending(b => b.CreatedAt)
                 .Select(b => new BookingDto
@@ -37,6 +38,7 @@ namespace eventra_api.Controllers
                     EventId = b.EventId,
                     EventTitle = b.Event.Title,
                     EventDate = b.Event.Date,
+                    VenueName = b.Event.Venue != null ? b.Event.Venue.Name : null,
                     UserId = b.UserId,
                     UserName = b.User.UserName ?? "",
                     BookingReference = b.BookingReference,
@@ -67,6 +69,7 @@ namespace eventra_api.Controllers
             var bookings = await _context.Bookings
                 .Where(b => b.UserId == user.Id)
                 .Include(b => b.Event)
+                    .ThenInclude(e => e.Venue)
                 .OrderByDescending(b => b.CreatedAt)
                 .Select(b => new BookingDto
                 {
@@ -74,6 +77,7 @@ namespace eventra_api.Controllers
                     EventId = b.EventId,
                     EventTitle = b.Event.Title,
                     EventDate = b.Event.Date,
+                    VenueName = b.Event.Venue != null ? b.Event.Venue.Name : null,
                     UserId = b.UserId,
                     UserName = user.UserName ?? "",
                     BookingReference = b.BookingReference,
@@ -105,6 +109,7 @@ namespace eventra_api.Controllers
             var bookings = await _context.Bookings
                 .Where(b => b.EventId == eventId)
                 .Include(b => b.Event)
+                    .ThenInclude(e => e.Venue)
                 .Include(b => b.User)
                 .OrderByDescending(b => b.CreatedAt)
                 .Select(b => new BookingDto
@@ -113,6 +118,7 @@ namespace eventra_api.Controllers
                     EventId = b.EventId,
                     EventTitle = b.Event.Title,
                     EventDate = b.Event.Date,
+                    VenueName = b.Event.Venue != null ? b.Event.Venue.Name : null,
                     UserId = b.UserId,
                     UserName = b.User.UserName ?? "",
                     BookingReference = b.BookingReference,
@@ -142,6 +148,7 @@ namespace eventra_api.Controllers
 
             var booking = await _context.Bookings
                 .Include(b => b.Event)
+                    .ThenInclude(e => e.Venue)
                 .Include(b => b.User)
                 .FirstOrDefaultAsync(b => b.Id == id);
 
@@ -162,6 +169,7 @@ namespace eventra_api.Controllers
                 EventId = booking.EventId,
                 EventTitle = booking.Event.Title,
                 EventDate = booking.Event.Date,
+                VenueName = booking.Event.Venue?.Name,
                 UserId = booking.UserId,
                 UserName = booking.User.UserName ?? "",
                 BookingReference = booking.BookingReference,
@@ -239,12 +247,18 @@ namespace eventra_api.Controllers
 
             await _context.SaveChangesAsync();
 
+            // Reload event with venue to include venue name
+            var eventWithVenue = await _context.Events
+                .Include(e => e.Venue)
+                .FirstOrDefaultAsync(e => e.Id == booking.EventId);
+
             var bookingDto = new BookingDto
             {
                 Id = booking.Id,
                 EventId = booking.EventId,
                 EventTitle = eventItem.Title,
                 EventDate = eventItem.Date,
+                VenueName = eventWithVenue?.Venue?.Name,
                 UserId = booking.UserId,
                 UserName = user.UserName ?? "",
                 BookingReference = booking.BookingReference,

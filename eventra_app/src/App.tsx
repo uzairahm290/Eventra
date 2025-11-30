@@ -19,6 +19,7 @@ import Profile from './pages/Profile';
 import Settings from './pages/Settings';
 import Calendar from './pages/Calendar';
 import Reports from './pages/Reports';
+import SearchPage from './pages/Search';
 import EventDetails from './pages/EventDetails';
 import CreateEvent from './pages/CreateEvent';
 import Help from './pages/Help';
@@ -36,6 +37,21 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated } = useAuth();
   return !isAuthenticated ? <>{children}</> : <Navigate to="/dashboard" replace />;
+};
+
+// Admin Route Component (redirect to dashboard if not admin)
+const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user, isAuthenticated } = useAuth();
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  if (user?.role !== 'Admin') {
+    return <Navigate to="/dashboard" replace />;
+  }
+  
+  return <>{children}</>;
 };
 
 function AppRoutes() {
@@ -94,10 +110,15 @@ function AppRoutes() {
         <Route path="bookings" element={<Bookings />} />
         <Route path="calendar" element={<Calendar />} />
         <Route path="reports" element={<Reports />} />
+        <Route path="search" element={<SearchPage />} />
         <Route path="profile" element={<Profile />} />
         <Route path="settings" element={<Settings />} />
         <Route path="help" element={<Help />} />
-        <Route path="admin/approvals" element={<AdminApproval />} />
+        <Route path="admin/approvals" element={
+          <AdminRoute>
+            <AdminApproval />
+          </AdminRoute>
+        } />
       </Route>
 
       {/* Public Landing */}

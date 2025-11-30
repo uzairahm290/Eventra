@@ -3,6 +3,9 @@ import { apiService } from './api';
 export interface Booking {
   id: number;
   eventId: number;
+  eventTitle?: string;
+  eventDate?: string;
+  venueName?: string;
   userId: string;
   bookingReference: string;
   bookingDate: string;
@@ -69,7 +72,8 @@ type BookingDto = {
   isApprovedByAdmin?: boolean;
   createdAt: string;
   updatedAt?: string;
-  eventTitle?: string; 
+  eventTitle?: string;
+  eventDate?: string;
   venueName?: string;
 };
 
@@ -100,6 +104,9 @@ class BookingService {
     return {
       id: dto.id,
       eventId: dto.eventId,
+      eventTitle: dto.eventTitle,
+      eventDate: dto.eventDate,
+      venueName: dto.venueName,
       userId: dto.userId,
       bookingReference: dto.bookingReference,
       bookingDate: dto.bookingDate,

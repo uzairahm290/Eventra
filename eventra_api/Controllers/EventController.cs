@@ -333,5 +333,54 @@ namespace eventra_api.Controllers
         {
             return await _context.Events.AnyAsync(e => e.Id == id);
         }
+
+        // POST: api/Events/5/menus
+        [HttpPost("{id}/menus")]
+        public async Task<IActionResult> AssignMenusToEvent(int id, [FromBody] AssignMenusDto dto)
+        {
+            var eventItem = await _context.Events.FindAsync(id);
+            if (eventItem == null)
+            {
+                return NotFound(new { message = "Event not found." });
+            }
+
+            // For development: Skip auth checks when not authenticated
+            if (User.Identity?.IsAuthenticated == true)
+            {
+                var user = await _userManager.GetUserAsync(User);
+                if (user == null)
+                {
+                    return Unauthorized(new { message = "User not found." });
+                }
+
+                if (eventItem.CreatedBy != user.Id && !User.IsInRole("Admin"))
+                {
+                    return Forbid();
+                }
+            }
+
+            if (dto == null || dto.MenuIds == null || dto.MenuIds.Count == 0)
+            {
+                return BadRequest(new { message = "No menu IDs provided." });
+            }
+
+            var menus = await _context.Menus
+                .Where(m => dto.MenuIds.Contains(m.Id) && m.IsAvailable)
+                .ToListAsync();
+
+            if (menus.Count == 0)
+            {
+                return BadRequest(new { message = "No valid menus found to assign." });
+            }
+
+            foreach (var menu in menus)
+            {
+                menu.EventId = id;
+            }
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Menus assigned to event successfully.", assignedCount = menus.Count });
+        }
     }
 }

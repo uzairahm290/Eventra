@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { FiCalendar, FiClock, FiMapPin, FiUsers, FiDollarSign, FiFileText, FiSave, FiX } from 'react-icons/fi';
@@ -11,13 +11,29 @@ const CreateEvent: React.FC = () => {
         date: '',
         startTime: '',
         endTime: '',
-        venue: '',
+        venueId: '',
         attendees: '',
         budget: '',
         client: '',
         description: '',
         services: [] as string[],
     });
+
+    const [venues, setVenues] = useState<Array<{ id: number; name: string }>>([]);
+
+    useEffect(() => {
+        const loadVenues = async () => {
+            try {
+                const { venueService } = await import('../services');
+                const list = await venueService.getActiveVenues();
+                setVenues(list.map(v => ({ id: v.id, name: v.name })));
+            } catch (err) {
+                console.error('Failed to load venues', err);
+                toast.error('Failed to load venues');
+            }
+        };
+        loadVenues();
+    }, []);
 
     const availableServices = [
         'Audio/Visual Equipment',
@@ -152,18 +168,16 @@ const CreateEvent: React.FC = () => {
                                 Venue *
                             </label>
                             <select
-                                name="venue"
-                                value={formData.venue}
+                                name="venueId"
+                                value={formData.venueId}
                                 onChange={handleInputChange}
                                 required
                                 className="input-field"
                             >
                                 <option value="">Select a venue</option>
-                                <option value="Grand Hall A">Grand Hall A</option>
-                                <option value="Garden Pavilion">Garden Pavilion</option>
-                                <option value="Convention Center">Convention Center</option>
-                                <option value="Rooftop Terrace">Rooftop Terrace</option>
-                                <option value="Ballroom B">Ballroom B</option>
+                                {venues.map(v => (
+                                    <option key={v.id} value={String(v.id)}>{v.name}</option>
+                                ))}
                             </select>
                         </div>
                     </div>

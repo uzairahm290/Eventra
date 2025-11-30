@@ -71,8 +71,9 @@ const Events: React.FC = () => {
         return;
       }
 
+      let savedEvent: Event | null = null;
       if (openEditId === 'new') {
-        await eventService.createEvent({
+        const created = await eventService.createEvent({
           title: data.title,
           date: data.date,
           location: data.location,
@@ -91,8 +92,9 @@ const Events: React.FC = () => {
           organizerEmail: data.organizerEmail,
           organizerPhone: data.organizerPhone,
         });
+        savedEvent = created;
       } else if (typeof openEditId === 'number') {
-        await eventService.updateEvent({
+        const updated = await eventService.updateEvent({
           id: openEditId,
           title: data.title,
           date: data.date,
@@ -112,13 +114,28 @@ const Events: React.FC = () => {
           organizerEmail: data.organizerEmail,
           organizerPhone: data.organizerPhone,
         });
+        savedEvent = updated;
+      }
+
+      // Assign menus if any were selected
+      const selectedMenuIds = ((data as any)?.selectedMenuIds ?? []).filter((id: number) => Number.isFinite(id));
+      if (savedEvent && selectedMenuIds.length > 0) {
+        try {
+          await (await import('../services')).apiService.post(`/Events/${savedEvent.id}/menus`, { MenuIds: selectedMenuIds });
+        } catch (assignErr) {
+          console.error('Failed to assign menus:', assignErr);
+          toast.error('Event saved, but assigning menus failed');
+        }
       }
       
       setOpenEditId(null);
       await loadEvents();
       toast.success(openEditId === 'new' ? 'Event created successfully!' : 'Event updated successfully!');
     } catch (error) {
-      const msg = error instanceof Error ? error.message : 'Failed to save event';
+      let msg = error instanceof Error ? error.message : 'Failed to save event';
+      if (typeof (error as any)?.message === 'string' && (error as any).message.toLowerCase().includes('forbidden')) {
+        msg = 'You are not authorized to modify this event. Please log in as the creator or an admin.';
+      }
       console.error('Save error:', error);
       setError(msg);
       toast.error(msg);
@@ -252,9 +269,6 @@ const Events: React.FC = () => {
                   Venue
                 </th>
                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Client
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Guests
                 </th>
                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -271,13 +285,13 @@ const Events: React.FC = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
                     Loading events...
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
                     No events found
                   </td>
                 </tr>
@@ -313,13 +327,10 @@ const Events: React.FC = () => {
                         {event.location}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {event.organizerName || 'N/A'}
-                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center text-sm text-gray-900">
                         <FiUsers className="mr-2 h-4 w-4 text-gray-400" />
-                        {event.currentAttendees}/{event.maxAttendees}
+                        {event.maxAttendees}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -497,12 +508,14 @@ export default Events;
     category: EventCategory;
     date: string;
     endDate?: string;
-    location: string;
+    venueId?: number;
     guests: number;
     status: EventStatus;
     description: string;
     isFree: boolean;
     ticketPrice?: number;
+    clientId?: number;
+    selectedMenuIds?: number[];
   };
 
   const EventForm: React.FC<{ initial?: Partial<Event>; onSave: (e: Partial<Event>) => void; onCancel: () => void }>
@@ -512,7 +525,7 @@ export default Events;
       category: initial?.category ?? EventCategory.Conference,
       date: initial?.date ?? new Date().toISOString().slice(0,10),
       endDate: initial?.endDate ?? undefined,
-      location: initial?.location ?? '',
+      venueId: initial?.venueId ?? undefined,
       guests: initial?.maxAttendees ?? 50,
       status: initial?.status ?? EventStatus.Draft,
       description: initial?.description ?? '',
@@ -520,24 +533,75 @@ export default Events;
       ticketPrice: initial?.ticketPrice ?? undefined,
     });
 
-    const update = (key: keyof EventItem, value: string | number | boolean | undefined) => setForm(prev => ({ ...prev, [key]: value }));
+    const [venues, setVenues] = useState<Array<{ id: number; name: string }>>([]);
+    const [clients, setClients] = useState<Array<{ id: number; name: string; email?: string; phone?: string }>>([]);
+    const [menus, setMenus] = useState<Array<{ id: number; name: string }>>([]);
+
+    useEffect(() => {
+      const loadVenues = async () => {
+        try {
+          const { venueService } = await import('../services');
+          const list = await venueService.getActiveVenues();
+          setVenues(list.map(v => ({ id: v.id, name: v.name })));
+        } catch (err) {
+          console.error('Failed to load venues', err);
+          toast.error('Failed to load venues');
+        }
+      };
+      const loadClients = async () => {
+        try {
+          const { clientService } = await import('../services');
+          const list = await clientService.getAllClients();
+          setClients(list.map((c: any) => ({ id: c.id, name: c.name || c.companyName || `Client #${c.id}`, email: c.email, phone: c.phone })));
+          // Preselect matching client if editing an existing event
+          if (initial?.organizerName) {
+            const match = list.find((c: any) => (c.name || c.companyName) === initial!.organizerName);
+            if (match) {
+              setForm(prev => ({ ...prev, clientId: match.id }));
+            }
+          }
+        } catch (err) {
+          console.error('Failed to load clients', err);
+        }
+      };
+      const loadMenus = async () => {
+        try {
+          const { menuService } = await import('../services');
+          const list = await menuService.getAll();
+          setMenus(list.map((m: any) => ({ id: m.id, name: m.name })));
+        } catch (err) {
+          console.error('Failed to load menus', err);
+        }
+      };
+      loadVenues();
+      loadClients();
+      loadMenus();
+    }, []);
+
+    const update = (key: keyof EventItem, value: string | number | boolean | number[] | undefined) => setForm(prev => ({ ...prev, [key]: value as any }));
 
     const handleSubmit = (e: React.FormEvent) => {
       e.preventDefault();
       // Convert form to Event format - this is a simplified form, real implementation would map properly
+      const selectedVenueName = form.venueId ? venues.find(v => v.id === form.venueId)?.name : undefined;
+      const selectedClient = form.clientId ? clients.find(c => c.id === form.clientId) : undefined;
       const eventData: Partial<Event> = {
         title: form.name,
         date: form.date,
         endDate: form.endDate,
-        location: form.location,
+        location: selectedVenueName ?? initial?.location ?? '',
         description: form.description,
         maxAttendees: form.guests,
         category: form.category,
         status: form.status,
         isFree: form.isFree,
         ticketPrice: form.ticketPrice,
+        venueId: form.venueId,
         requiresApproval: false,
         isPublic: true,
+        organizerName: selectedClient?.name,
+        organizerEmail: selectedClient?.email,
+        organizerPhone: selectedClient?.phone,
       };
       onSave(eventData);
     };
@@ -564,12 +628,26 @@ export default Events;
             <input type="date" className="input-field" value={form.endDate ?? ''} onChange={e=>update('endDate', e.target.value)} />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Location</label>
-            <input className="input-field" value={form.location} onChange={e=>update('location', e.target.value)} />
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Venue</label>
+            <select className="input-field" value={form.venueId ?? ''} onChange={e=>update('venueId', Number(e.target.value))}>
+              <option value="">Select a venue</option>
+              {venues.map(v => (
+                <option key={v.id} value={v.id}>{v.name}</option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Guests</label>
             <input type="number" className="input-field" value={form.guests} onChange={e=>update('guests', Number(e.target.value))} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Client</label>
+            <select className="input-field" value={form.clientId ?? ''} onChange={e=>update('clientId', Number(e.target.value))}>
+              <option value="">Select a client</option>
+              {clients.map(c => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Status</label>
@@ -592,6 +670,18 @@ export default Events;
                 {!form.isFree && (
                   <input type="number" className="input-field" placeholder="Ticket Price" value={form.ticketPrice ?? 0} onChange={e=>update('ticketPrice', Number(e.target.value))} />
                 )}
+              </div>
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Menus</label>
+                <select multiple className="input-field h-28" value={(form.selectedMenuIds ?? []).map(String)} onChange={(e: React.ChangeEvent<HTMLSelectElement>)=>{
+                  const options = Array.from(e.target.selectedOptions).map((o: HTMLOptionElement)=>Number(o.value));
+                  update('selectedMenuIds', options);
+                }}>
+                  {menus.map(m => (
+                    <option key={m.id} value={m.id}>{m.name}</option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-500 mt-1">Hold Ctrl/Command to select multiple.</p>
               </div>
             </div>
           </div>

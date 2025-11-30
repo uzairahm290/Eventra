@@ -36,6 +36,13 @@ const renderAvatar = (user: { firstName?: string; lastName?: string; profileImag
   );
 };
 
+interface NavigationItem {
+  name: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  adminOnly?: boolean;
+}
+
 const DashboardLayout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -45,7 +52,7 @@ const DashboardLayout: React.FC = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
 
-  const navigation = [
+  const allNavigation: NavigationItem[] = [
     { name: 'Dashboard', href: '/dashboard', icon: FiHome },
     { name: 'Events', href: '/dashboard/events', icon: FiCalendar },
     { name: 'Venues', href: '/dashboard/venues', icon: FiMapPin },
@@ -54,9 +61,14 @@ const DashboardLayout: React.FC = () => {
     { name: 'Bookings', href: '/dashboard/bookings', icon: FiBookOpen },
     { name: 'Calendar', href: '/dashboard/calendar', icon: FiCalendar },
     { name: 'Reports', href: '/dashboard/reports', icon: FiBarChart2 },
-    { name: 'Admin Approvals', href: '/dashboard/admin/approvals', icon: FiUsers },
+    { name: 'Admin Approvals', href: '/dashboard/admin/approvals', icon: FiUsers, adminOnly: true },
     { name: 'Help', href: '/dashboard/help', icon: FiHelpCircle },
   ];
+
+  // Filter navigation based on user role
+  const navigation = allNavigation.filter(item => 
+    !item.adminOnly || user?.role === 'Admin'
+  );
 
   const handleLogout = () => {
     logout();
@@ -178,6 +190,13 @@ const DashboardLayout: React.FC = () => {
                     type="text"
                     placeholder="Search..."
                     className="block w-64 pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none text-sm"
+                    onKeyDown={(e)=>{
+                      const target = e.target as HTMLInputElement;
+                      if(e.key==='Enter'){
+                        const q = (target.value||'').trim();
+                        if(q){ navigate(`/dashboard/search?q=${encodeURIComponent(q)}`); }
+                      }
+                    }}
                   />
                 </div>
               </div>

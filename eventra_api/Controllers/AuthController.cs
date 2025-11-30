@@ -204,7 +204,7 @@ namespace eventra_api.Controllers
             var frontendBase = Request.Headers.ContainsKey("Origin") ? Request.Headers["Origin"].ToString() : "http://localhost:5173";
             var resetUrl = $"{frontendBase}/reset-password?userId={WebUtility.UrlEncode(user.Id)}&token={WebUtility.UrlEncode(token)}";
 
-            await _emailService.SendEmailAsync(user.Email, "Reset your Eventra password",
+            await _emailService.SendEmailAsync(user.Email!, "Reset your Eventra password",
                 $"<p>Hello {WebUtility.HtmlEncode(user.FirstName ?? user.UserName)},</p>" +
                 $"<p>We received a request to reset your password. Click the button below to proceed:</p>" +
                 $"<p><a href='{resetUrl}' style='display:inline-block;padding:10px 16px;background:#2563eb;color:#fff;text-decoration:none;border-radius:8px'>Reset Password</a></p>" +

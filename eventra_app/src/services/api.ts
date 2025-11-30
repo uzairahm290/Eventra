@@ -184,6 +184,11 @@ class ApiService {
     });
 
     if (!response.ok) {
+      if (response.status === 403) {
+        const err = await this.parseJsonSafe(response);
+        const msg = (typeof err === 'object' && err && (err as any).message) ? (err as any).message : 'Forbidden';
+        throw new Error(`API Error: ${msg}`);
+      }
       throw new Error(`API Error: ${response.statusText}`);
     }
 
@@ -200,6 +205,11 @@ class ApiService {
     });
 
     if (!response.ok) {
+      if (response.status === 403) {
+        const err = await this.parseJsonSafe(response);
+        const msg = (typeof err === 'object' && err && (err as any).message) ? (err as any).message : 'Forbidden';
+        throw new Error(`API Error: ${msg}`);
+      }
       throw new Error(`API Error: ${response.statusText}`);
     }
 

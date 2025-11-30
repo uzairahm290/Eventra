@@ -23,6 +23,7 @@ namespace eventra_api.Models
         public int EventId { get; set; }
         public string EventTitle { get; set; } = string.Empty;
         public DateTime EventDate { get; set; }
+        public string? VenueName { get; set; }
         public string UserId { get; set; } = string.Empty;
         public string UserName { get; set; } = string.Empty;
         public string BookingReference { get; set; } = string.Empty;

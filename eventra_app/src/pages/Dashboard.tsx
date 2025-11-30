@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { FiCalendar, FiMapPin, FiUsers, FiDollarSign, FiTrendingUp, FiArrowUp } from 'react-icons/fi';
 import type { IconType } from 'react-icons';
 import { toast } from 'react-toastify';
 
 type EventItem = { id: number; title: string; date: string; venueName?: string; status?: number; maxAttendees?: number; currentAttendees?: number; };
-type BookingItem = { id: number; userId: string; bookingDate: string; totalAmount?: number; amountPaid?: number; };
+type BookingItem = { id: number; userId: string; eventTitle: string; venueName?: string; bookingDate: string; totalAmount?: number; amountPaid?: number; };
 
 const Dashboard: React.FC = () => {
+  const navigate = useNavigate();
   const [stats, setStats] = useState<Array<{name: string; value: string; change: string; trend: 'up' | 'down'; icon: IconType; color: string;}>>([]);
   const [recentEvents, setRecentEvents] = useState<EventItem[]>([]);
   const [upcomingBookings, setUpcomingBookings] = useState<Array<{ id: number; client: string; venue: string; date: string; amount: string }>>([]);
@@ -15,6 +17,7 @@ const Dashboard: React.FC = () => {
     const loadDashboard = async () => {
       try {
         const { eventService, bookingService } = await import('../services');
+        const menuSvcModule = await import('../services/menuService');
         // Events
         const events = await eventService.getAllEvents();
         const totalEvents = Array.isArray(events) ? events.length : 0;
@@ -28,15 +31,15 @@ const Dashboard: React.FC = () => {
 
         // Bookings
         const bookings = await bookingService.getAllBookings();
-        type BookingDTO = { id: number; userId: string; bookingDate: string; totalAmount?: number };
+        type BookingDTO = { id: number; userId: string; eventTitle: string; venueName?: string; bookingDate: string; totalAmount?: number };
         const upcoming = (bookings || [])
           .filter((b: BookingItem) => new Date(b.bookingDate) >= new Date())
           .sort((a: BookingItem, b: BookingItem) => new Date(a.bookingDate).getTime() - new Date(b.bookingDate).getTime())
           .slice(0, 5)
           .map((b: BookingDTO) => ({
             id: b.id,
-            client: `User #${b.userId}`,
-            venue: 'N/A',
+            client: b.eventTitle,
+            venue: b.venueName || 'N/A',
             date: new Date(b.bookingDate).toLocaleDateString(),
             amount: `$${(b.totalAmount ?? 0).toFixed(2)}`
           }));
@@ -46,11 +49,14 @@ const Dashboard: React.FC = () => {
         const totalRevenue = (bookings || []).reduce((sum: number, b: BookingDTO) => sum + (b.totalAmount ?? 0), 0);
         const totalClientsEst = new Set((bookings || []).map((b: BookingDTO) => b.userId)).size;
 
+        const activeMenus = await menuSvcModule.default.getAll().then(list => list.filter(m => m.isAvailable).length).catch(() => 0);
+
         setStats([
           { name: 'Total Events', value: String(totalEvents), change: `${upcomingEvents} upcoming`, trend: 'up', icon: FiCalendar, color: 'blue' },
           { name: 'Active Venues', value: '—', change: '+0', trend: 'up', icon: FiMapPin, color: 'green' },
           { name: 'Total Clients', value: String(totalClientsEst), change: '+', trend: 'up', icon: FiUsers, color: 'orange' },
           { name: 'Revenue', value: `$${totalRevenue.toFixed(2)}`, change: 'MTD', trend: 'up', icon: FiDollarSign, color: 'emerald' },
+          { name: 'Active Menus', value: String(activeMenus), change: '', trend: 'up', icon: FiUsers, color: 'indigo' },
         ]);
       } catch (error) {
         console.error('Failed to load dashboard data:', error);
@@ -112,7 +118,7 @@ const Dashboard: React.FC = () => {
           <div className="card p-6">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold text-gray-900">Recent Events</h2>
-              <button className="text-sm text-primary-600 hover:text-primary-700 font-medium">
+              <button onClick={() => navigate('/dashboard/events')} className="text-sm text-primary-600 hover:text-primary-700 font-medium">
                 View All →
               </button>
             </div>
@@ -148,7 +154,7 @@ const Dashboard: React.FC = () => {
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">{new Date(event.date).toLocaleDateString()}</td>
                       <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">{event.venueName ?? 'N/A'}</td>
-                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">{event.currentAttendees ?? 0}/{event.maxAttendees ?? '—'}</td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">{event.maxAttendees ?? '—'}</td>
                       <td className="px-4 py-4 whitespace-nowrap">
                         <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(typeof event.status === 'string' ? event.status : (event.status === 1 ? 'Confirmed' : event.status === 0 ? 'Pending' : event.status === 2 ? 'Cancelled' : 'Draft'))}`}>
                           {typeof event.status === 'string' ? event.status : (event.status === 1 ? 'Confirmed' : event.status === 0 ? 'Pending' : event.status === 2 ? 'Cancelled' : 'Draft')}
@@ -186,24 +192,24 @@ const Dashboard: React.FC = () => {
                 </div>
               ))}
             </div>
-            <button className="mt-4 w-full btn-outline text-sm py-2">
+            <button onClick={() => navigate('/dashboard/bookings')} className="mt-4 w-full btn-outline text-sm py-2">
               View All Bookings
             </button>
           </div>
 
-          {/* Quick Actions */}
+          {/* Quick Actions */
           <div className="card p-6 mt-6">
             <h2 className="text-xl font-bold text-gray-900 mb-4">Quick Actions</h2>
             <div className="space-y-3">
-              <button className="w-full btn-primary text-sm py-3">
+              <button onClick={() => navigate('/dashboard/create-event')} className="w-full btn-primary text-sm py-3">
                 <FiCalendar className="inline mr-2 h-4 w-4" />
                 Create New Event
               </button>
-              <button className="w-full btn-secondary text-sm py-3">
+              <button onClick={() => navigate('/dashboard/clients')} className="w-full btn-secondary text-sm py-3">
                 <FiUsers className="inline mr-2 h-4 w-4" />
                 Add Client
               </button>
-              <button className="w-full btn-outline text-sm py-3">
+              <button onClick={() => navigate('/dashboard/venues')} className="w-full btn-outline text-sm py-3">
                 <FiMapPin className="inline mr-2 h-4 w-4" />
                 Manage Venues
               </button>
