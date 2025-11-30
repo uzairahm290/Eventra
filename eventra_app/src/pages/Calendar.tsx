@@ -26,7 +26,8 @@ const Calendar: React.FC = () => {
                 const data = await eventService.getAllEvents();
                 // Map to local type and assign colors deterministically
                 const palette = ['bg-blue-500','bg-pink-500','bg-purple-500','bg-emerald-500','bg-orange-500','bg-cyan-500'];
-                const mapped: EventItem[] = (data || []).map((e: any, idx: number) => ({
+                type EventDTO = { id: number; title: string; date: string; venueName?: string; ticketPrice?: number };
+                const mapped: EventItem[] = (data || []).map((e: EventDTO, idx: number) => ({
                     id: e.id,
                     title: e.title,
                     date: e.date, // ISO string

@@ -4,9 +4,12 @@ import { FiTrendingUp, FiDollarSign, FiCalendar, FiUsers, FiDownload } from 'rea
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { toast } from 'react-toastify';
 
+type EventItem = { id: number; title: string; date: string; status?: number; ticketPrice?: number; maxAttendees?: number; currentAttendees?: number; category?: number; categoryName?: string; venueName?: string };
+type BookingItem = { id: number; eventId?: number; totalAmount?: number; bookingDate: string; status?: number; userId?: string };
+
 const Reports: React.FC = () => {
-    const [events, setEvents] = useState<any[]>([]);
-    const [bookings, setBookings] = useState<any[]>([]);
+    const [events, setEvents] = useState<EventItem[]>([]);
+    const [bookings, setBookings] = useState<BookingItem[]>([]);
 
     useEffect(() => {
         const loadData = async () => {
@@ -40,7 +43,7 @@ const Reports: React.FC = () => {
     const eventTypes = useMemo(() => {
         const counts: Record<string, number> = {};
         events.forEach(e => {
-            const name = typeof e.category === 'string' ? e.category : (e.categoryName ?? 'Other');
+            const name = e.categoryName ?? 'Other';
             counts[name] = (counts[name] ?? 0) + 1;
         });
         const palette = ['#ec4899','#3b82f6','#8b5cf6','#10b981','#f97316','#22d3ee'];

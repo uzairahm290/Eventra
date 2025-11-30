@@ -22,6 +22,7 @@ import EventDetails from './pages/EventDetails';
 import CreateEvent from './pages/CreateEvent';
 import Help from './pages/Help';
 import AdminApproval from './pages/AdminApproval';
+import Landing from './pages/Landing';
 import './App.css';
 
 // Protected Route Component
@@ -90,11 +91,11 @@ function AppRoutes() {
         <Route path="admin/approvals" element={<AdminApproval />} />
       </Route>
 
-      {/* Redirect root to login */}
-      <Route path="/" element={<Navigate to="/login" replace />} />
+      {/* Public Landing */}
+      <Route path="/" element={<Landing />} />
 
-      {/* 404 - Redirect to login */}
-      <Route path="*" element={<Navigate to="/login" replace />} />
+      {/* 404 - Redirect to home */}
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
