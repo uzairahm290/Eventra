@@ -37,6 +37,9 @@ namespace eventra_api.Models
         public string? ContactEmail { get; set; }
 
         public decimal? PricePerHour { get; set; }
+
+        [MaxLength(500)]
+        public string? ImageUrl { get; set; }
     }
 
     // DTO for venue response
@@ -53,6 +56,7 @@ namespace eventra_api.Models
         public string? ContactPhone { get; set; }
         public string? ContactEmail { get; set; }
         public decimal? PricePerHour { get; set; }
+        public string? ImageUrl { get; set; }
         public bool IsActive { get; set; }
         public int EventCount { get; set; }
     }

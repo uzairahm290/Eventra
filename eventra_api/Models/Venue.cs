@@ -36,13 +36,14 @@ namespace eventra_api.Models
         [MaxLength(100)]
         public string? ContactEmail { get; set; }
 
-        public decimal? PricePerHour { get; set; }
+    public decimal? PricePerHour { get; set; }
 
-        public bool IsActive { get; set; } = true;
+    [MaxLength(500)]
+    public string? ImageUrl { get; set; }
 
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public bool IsActive { get; set; } = true;
 
-        public DateTime? UpdatedAt { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;        public DateTime? UpdatedAt { get; set; }
 
         // Navigation property
         public ICollection<Event> Events { get; set; } = new List<Event>();

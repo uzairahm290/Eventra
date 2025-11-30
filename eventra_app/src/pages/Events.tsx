@@ -552,10 +552,15 @@ export default Events;
         try {
           const { clientService } = await import('../services');
           const list = await clientService.getAllClients();
-          setClients(list.map((c: { id: number; name?: string; companyName?: string; email: string; phone: string }) => ({ id: c.id, name: c.name || c.companyName || `Client #${c.id}`, email: c.email, phone: c.phone })));
+          setClients(list.map(c => ({ 
+            id: c.id, 
+            name: `${c.firstName} ${c.secondName}`.trim() || c.company || `Client #${c.id}`, 
+            email: c.email, 
+            phone: c.phone || '' 
+          })));
           // Preselect matching client if editing an existing event
           if (initial?.organizerName) {
-            const match = list.find((c: { name?: string; companyName?: string }) => (c.name || c.companyName) === initial!.organizerName);
+            const match = list.find(c => `${c.firstName} ${c.secondName}`.trim() === initial!.organizerName || c.company === initial!.organizerName);
             if (match) {
               setForm(prev => ({ ...prev, clientId: match.id }));
             }

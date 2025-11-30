@@ -42,6 +42,7 @@ namespace eventra_api.Controllers
                     ContactPhone = v.ContactPhone,
                     ContactEmail = v.ContactEmail,
                     PricePerHour = v.PricePerHour,
+                    ImageUrl = v.ImageUrl,
                     IsActive = v.IsActive,
                     EventCount = v.Events.Count
                 })
@@ -76,6 +77,7 @@ namespace eventra_api.Controllers
                 ContactPhone = venue.ContactPhone,
                 ContactEmail = venue.ContactEmail,
                 PricePerHour = venue.PricePerHour,
+                ImageUrl = venue.ImageUrl,
                 IsActive = venue.IsActive,
                 EventCount = venue.Events.Count
             };
@@ -100,6 +102,7 @@ namespace eventra_api.Controllers
                 ContactPhone = createDto.ContactPhone,
                 ContactEmail = createDto.ContactEmail,
                 PricePerHour = createDto.PricePerHour,
+                ImageUrl = createDto.ImageUrl,
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow
             };
@@ -120,6 +123,7 @@ namespace eventra_api.Controllers
                 ContactPhone = venue.ContactPhone,
                 ContactEmail = venue.ContactEmail,
                 PricePerHour = venue.PricePerHour,
+                ImageUrl = venue.ImageUrl,
                 IsActive = venue.IsActive,
                 EventCount = 0
             };
@@ -149,6 +153,7 @@ namespace eventra_api.Controllers
             venue.ContactPhone = updateDto.ContactPhone;
             venue.ContactEmail = updateDto.ContactEmail;
             venue.PricePerHour = updateDto.PricePerHour;
+            venue.ImageUrl = updateDto.ImageUrl;
             venue.UpdatedAt = DateTime.UtcNow;
 
             try

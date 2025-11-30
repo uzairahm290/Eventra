@@ -16,7 +16,7 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     const loadDashboard = async () => {
       try {
-        const { eventService, bookingService } = await import('../services');
+        const { eventService, bookingService, venueService } = await import('../services');
         const menuSvcModule = await import('../services/menuService');
         // Events
         const events = await eventService.getAllEvents();
@@ -49,10 +49,14 @@ const Dashboard: React.FC = () => {
         const totalClientsEst = new Set((bookings || []).map((b: Booking) => b.userId)).size;
 
         const activeMenus = await menuSvcModule.default.getAll().then(list => list.filter(m => m.isAvailable).length).catch(() => 0);
+        
+        // Venues
+        const venues = await venueService.getAllVenues();
+        const activeVenues = (venues || []).filter((v: { isActive: boolean }) => v.isActive).length;
 
         setStats([
           { name: 'Total Events', value: String(totalEvents), change: `${upcomingEvents} upcoming`, trend: 'up', icon: FiCalendar, color: 'blue' },
-          { name: 'Active Venues', value: '—', change: '+0', trend: 'up', icon: FiMapPin, color: 'green' },
+          { name: 'Active Venues', value: String(activeVenues), change: `${venues?.length || 0} total`, trend: 'up', icon: FiMapPin, color: 'green' },
           { name: 'Total Clients', value: String(totalClientsEst), change: '+', trend: 'up', icon: FiUsers, color: 'orange' },
           { name: 'Revenue', value: `$${totalRevenue.toFixed(2)}`, change: 'MTD', trend: 'up', icon: FiDollarSign, color: 'emerald' },
           { name: 'Active Menus', value: String(activeMenus), change: '', trend: 'up', icon: FiUsers, color: 'indigo' },

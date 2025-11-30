@@ -63,6 +63,8 @@ const Workers: React.FC = () => {
       if (workersRes.ok) {
         const workersData = await workersRes.json();
         setWorkers(workersData);
+      } else if (workersRes.status === 403) {
+        toast.error('Access denied. Admin privileges required to view workers.');
       }
 
       if (venuesRes.ok) {
@@ -105,9 +107,15 @@ const Workers: React.FC = () => {
         setShowModal(false);
         resetForm();
         loadData();
+      } else if (response.status === 403) {
+        toast.error('Access denied. Admin privileges required.');
       } else {
-        const error = await response.json();
-        toast.error(error.message || 'Failed to save worker');
+        try {
+          const error = await response.json();
+          toast.error(error.message || 'Failed to save worker');
+        } catch {
+          toast.error('Failed to save worker');
+        }
       }
     } catch (error) {
       console.error('Failed to save worker:', error);
@@ -199,7 +207,7 @@ const Workers: React.FC = () => {
               placeholder="Search by name or phone..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="input pl-10 w-full"
+              className="input pl-10 w-full focus:outline-none"
             />
           </div>
 
@@ -207,7 +215,7 @@ const Workers: React.FC = () => {
           <select
             value={selectedVenue}
             onChange={(e) => setSelectedVenue(e.target.value === 'all' ? 'all' : Number(e.target.value))}
-            className="input"
+            className="input focus:outline-none"
           >
             <option value="all">All Venues</option>
             {venues.map(venue => (
@@ -280,16 +288,16 @@ const Workers: React.FC = () => {
 
       {/* Add/Edit Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={handleCloseModal}>
+          <div className="bg-white rounded-lg max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
               {editingWorker ? 'Edit Worker' : 'Add New Worker'}
             </h2>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Name */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Name *
                 </label>
                 <input
@@ -304,7 +312,7 @@ const Workers: React.FC = () => {
 
               {/* Phone */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Phone *
                 </label>
                 <input
@@ -319,7 +327,7 @@ const Workers: React.FC = () => {
 
               {/* Address */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Address *
                 </label>
                 <textarea
@@ -334,7 +342,7 @@ const Workers: React.FC = () => {
 
               {/* Venue */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Venue *
                 </label>
                 <select

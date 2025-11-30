@@ -12,6 +12,7 @@ export interface Venue {
   contactPhone?: string;
   contactEmail?: string;
   pricePerHour?: number;
+  imageUrl?: string;
   isActive: boolean;
   createdAt: string;
   updatedAt?: string;
@@ -28,6 +29,7 @@ export interface CreateVenueRequest {
   contactPhone?: string;
   contactEmail?: string;
   pricePerHour?: number;
+  imageUrl?: string;
   isActive: boolean;
 }
 
