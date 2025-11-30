@@ -33,6 +33,7 @@ namespace eventra_api.Models
         public decimal AmountPaid { get; set; }
         public bool IsCheckedIn { get; set; }
         public string? QRCode { get; set; }
+        public bool IsApprovedByAdmin { get; set; }
     }
 
     // DTO for payment

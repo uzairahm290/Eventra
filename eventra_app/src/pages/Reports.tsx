@@ -1,40 +1,74 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { FiTrendingUp, FiDollarSign, FiCalendar, FiUsers, FiDownload } from 'react-icons/fi';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { toast } from 'react-toastify';
 
 const Reports: React.FC = () => {
-    // Mock data for charts
-    const monthlyRevenue = [
-        { month: 'Jan', revenue: 45000, bookings: 12 },
-        { month: 'Feb', revenue: 52000, bookings: 15 },
-        { month: 'Mar', revenue: 48000, bookings: 13 },
-        { month: 'Apr', revenue: 61000, bookings: 18 },
-        { month: 'May', revenue: 55000, bookings: 16 },
-        { month: 'Jun', revenue: 67000, bookings: 20 },
-    ];
+    const [events, setEvents] = useState<any[]>([]);
+    const [bookings, setBookings] = useState<any[]>([]);
 
-    const eventTypes = [
-        { name: 'Weddings', value: 35, color: '#ec4899' },
-        { name: 'Corporate', value: 30, color: '#3b82f6' },
-        { name: 'Conferences', value: 20, color: '#8b5cf6' },
-        { name: 'Parties', value: 15, color: '#10b981' },
-    ];
+    useEffect(() => {
+        const loadData = async () => {
+            try {
+                const { eventService, bookingService } = await import('../services');
+                const ev = await eventService.getAllEvents();
+                const bk = await bookingService.getAllBookings();
+                setEvents(ev || []);
+                setBookings(bk || []);
+            } catch (error) {
+                console.error('Failed to load reports data:', error);
+                toast.error('Failed to load reports data');
+            }
+        };
+        loadData();
+    }, []);
 
-    const venueUtilization = [
-        { venue: 'Grand Hall A', utilization: 85 },
-        { venue: 'Garden Pavilion', utilization: 72 },
-        { venue: 'Convention Center', utilization: 90 },
-        { venue: 'Rooftop Terrace', utilization: 65 },
-        { venue: 'Ballroom B', utilization: 78 },
-    ];
+    const monthlyRevenue = useMemo(() => {
+        const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        const byMonth: Record<string, { revenue: number; bookings: number }> = {};
+        bookings.forEach(b => {
+            const d = new Date(b.bookingDate);
+            const key = months[d.getMonth()];
+            if (!byMonth[key]) byMonth[key] = { revenue: 0, bookings: 0 };
+            byMonth[key].revenue += (b.totalAmount ?? 0);
+            byMonth[key].bookings += 1;
+        });
+        return months.map(m => ({ month: m, revenue: byMonth[m]?.revenue ?? 0, bookings: byMonth[m]?.bookings ?? 0 }));
+    }, [bookings]);
 
-    const stats = [
-        { label: 'Total Revenue', value: '$328,000', change: '+12.5%', icon: FiDollarSign, color: 'bg-green-500' },
-        { label: 'Total Bookings', value: '94', change: '+8.3%', icon: FiCalendar, color: 'bg-blue-500' },
-        { label: 'Active Clients', value: '156', change: '+15.2%', icon: FiUsers, color: 'bg-purple-500' },
-        { label: 'Avg. Revenue/Event', value: '$3,489', change: '+4.1%', icon: FiTrendingUp, color: 'bg-orange-500' },
-    ];
+    const eventTypes = useMemo(() => {
+        const counts: Record<string, number> = {};
+        events.forEach(e => {
+            const name = typeof e.category === 'string' ? e.category : (e.categoryName ?? 'Other');
+            counts[name] = (counts[name] ?? 0) + 1;
+        });
+        const palette = ['#ec4899','#3b82f6','#8b5cf6','#10b981','#f97316','#22d3ee'];
+        return Object.entries(counts).map(([name, value], idx) => ({ name, value, color: palette[idx % palette.length] }));
+    }, [events]);
+
+    const venueUtilization = useMemo(() => {
+        // If venue names exist on events, compute simple utilization metric by occurrences
+        const counts: Record<string, number> = {};
+        events.forEach(e => {
+            const venue = e.venueName || 'N/A';
+            counts[venue] = (counts[venue] ?? 0) + 1;
+        });
+        return Object.entries(counts).map(([venue, count]) => ({ venue, utilization: Math.min(100, count * 10) }));
+    }, [events]);
+
+    const stats = useMemo(() => {
+        const totalRevenue = bookings.reduce((sum, b) => sum + (b.totalAmount ?? 0), 0);
+        const totalBookings = bookings.length;
+        const activeClients = new Set(bookings.map(b => b.userId)).size;
+        const avgRevenuePerEvent = events.length ? totalRevenue / events.length : 0;
+        return [
+            { label: 'Total Revenue', value: `$${totalRevenue.toFixed(2)}`, change: 'YTD', icon: FiDollarSign, color: 'bg-green-500' },
+            { label: 'Total Bookings', value: String(totalBookings), change: 'YTD', icon: FiCalendar, color: 'bg-blue-500' },
+            { label: 'Active Clients', value: String(activeClients), change: 'YTD', icon: FiUsers, color: 'bg-purple-500' },
+            { label: 'Avg. Revenue/Event', value: `$${avgRevenuePerEvent.toFixed(2)}`, change: 'YTD', icon: FiTrendingUp, color: 'bg-orange-500' },
+        ];
+    }, [bookings, events]);
 
     return (
         <motion.div
@@ -49,7 +83,68 @@ const Reports: React.FC = () => {
                     <h1 className="text-3xl font-bold text-gray-900">Reports & Analytics</h1>
                     <p className="text-gray-600 mt-1">Track your business performance and insights</p>
                 </div>
-                <button className="btn-primary flex items-center gap-2">
+                                <button
+                                    className="btn-primary flex items-center gap-2"
+                                    onClick={() => {
+                                        try {
+                                            // Build CSV from computed datasets
+                                            const rows: Array<Array<string | number>> = [];
+                                            // Section 1: KPIs
+                                            rows.push(['Section','Metric','Value']);
+                                            rows.push(['KPIs','Total Revenue', stats[0]?.value ?? '0']);
+                                            rows.push(['KPIs','Total Bookings', stats[1]?.value ?? '0']);
+                                            rows.push(['KPIs','Active Clients', stats[2]?.value ?? '0']);
+                                            rows.push(['KPIs','Avg. Revenue/Event', stats[3]?.value ?? '0']);
+
+                                            // Blank line
+                                            rows.push([]);
+
+                                            // Section 2: Monthly Revenue & Bookings
+                                            rows.push(['Month','Revenue','Bookings']);
+                                            monthlyRevenue.forEach(m => rows.push([m.month, m.revenue, m.bookings]));
+
+                                            // Blank line
+                                            rows.push([]);
+
+                                            // Section 3: Event Types Distribution
+                                            rows.push(['Event Type','Count']);
+                                            eventTypes.forEach(t => rows.push([t.name, t.value]));
+
+                                            // Blank line
+                                            rows.push([]);
+
+                                            // Section 4: Venue Utilization
+                                            rows.push(['Venue','Utilization %']);
+                                            venueUtilization.forEach(v => rows.push([v.venue, v.utilization]));
+
+                                            const csv = rows
+                                                .map(r => r.map(val => {
+                                                    const s = String(val ?? '');
+                                                    // Escape commas, quotes, and newlines
+                                                    if (/[",\n]/.test(s)) {
+                                                        return '"' + s.replace(/"/g, '""') + '"';
+                                                    }
+                                                    return s;
+                                                }).join(','))
+                                                .join('\n');
+
+                                            // Create downloadable file (add BOM for Excel compatibility)
+                                            const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
+                                            const url = URL.createObjectURL(blob);
+                                            const a = document.createElement('a');
+                                            a.href = url;
+                                            const ts = new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
+                                            a.download = `eventra-report-${ts}.csv`;
+                                            document.body.appendChild(a);
+                                            a.click();
+                                            document.body.removeChild(a);
+                                            URL.revokeObjectURL(url);
+                                        } catch (e) {
+                                            console.error('Export failed:', e);
+                                            toast.error('Failed to export report');
+                                        }
+                                    }}
+                                >
                     <FiDownload className="w-4 h-4" />
                     Export Report
                 </button>
@@ -162,7 +257,7 @@ const Reports: React.FC = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5 }}
-                className="bg-gradient-to-r from-primary-50 to-cyan-50 rounded-xl border border-primary-200 p-6"
+                className="bg-linear-to-r from-primary-50 to-cyan-50 rounded-xl border border-primary-200 p-6"
             >
                 <h3 className="text-lg font-semibold text-gray-900 mb-3">Key Insights</h3>
                 <ul className="space-y-2 text-gray-700">

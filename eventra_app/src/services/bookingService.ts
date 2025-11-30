@@ -19,6 +19,7 @@ export interface Booking {
   specialRequests?: string;
   cancellationReason?: string;
   cancellationDate?: string;
+  isApprovedByAdmin: boolean;
   createdAt: string;
   updatedAt?: string;
 }
@@ -88,6 +89,7 @@ class BookingService {
       specialRequests: dto.specialRequests,
       cancellationReason: dto.cancellationReason,
       cancellationDate: dto.cancellationDate,
+      isApprovedByAdmin: dto.isApprovedByAdmin || false,
       createdAt: dto.createdAt,
       updatedAt: dto.updatedAt
     };
@@ -129,6 +131,14 @@ class BookingService {
 
   async deleteBooking(id: number): Promise<void> {
     return await apiService.delete(`/Bookings/${id}`);
+  }
+
+  async approveBooking(id: number): Promise<Booking> {
+    return await apiService.post(`/Bookings/${id}/approve`);
+  }
+
+  async rejectBooking(id: number): Promise<Booking> {
+    return await apiService.post(`/Bookings/${id}/reject`);
   }
 
   getStatusName(status: BookingStatus): string {

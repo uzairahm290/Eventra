@@ -21,6 +21,7 @@ import Reports from './pages/Reports';
 import EventDetails from './pages/EventDetails';
 import CreateEvent from './pages/CreateEvent';
 import Help from './pages/Help';
+import AdminApproval from './pages/AdminApproval';
 import './App.css';
 
 // Protected Route Component
@@ -86,6 +87,7 @@ function AppRoutes() {
         <Route path="profile" element={<Profile />} />
         <Route path="settings" element={<Settings />} />
         <Route path="help" element={<Help />} />
+        <Route path="admin/approvals" element={<AdminApproval />} />
       </Route>
 
       {/* Redirect root to login */}

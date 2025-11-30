@@ -162,10 +162,103 @@ namespace eventra_api.Controllers
                 // Use the actual ApplicationUser property name (LastName)
                 lastName = u.SecondName,
                 dateRegistered = u.DateRegistered,
-                userName = u.UserName
+                userName = u.UserName,
+                isApproved = u.IsApproved
             }).ToList();
 
             return Ok(new { message = "Users retrieved successfully!", users = userList });
+        }
+
+        // ------------------------------------------------------------------
+        // FORGOT PASSWORD - Request Reset (POST /api/Auth/ForgotPassword)
+        // ------------------------------------------------------------------
+        [HttpPost("ForgotPassword")]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto model)
+        {
+            var user = await _userManager.FindByEmailAsync(model.Email);
+            if (user == null)
+            {
+                // For security, return success even if user doesn't exist
+                return Ok(new { message = "If an account with that email exists, a reset link has been sent." });
+            }
+
+            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+            // In production, send this token via email. For now, return it (dev only)
+            // TODO: Integrate email service to send reset link
+            
+            return Ok(new { 
+                message = "If an account with that email exists, a reset link has been sent.",
+                // REMOVE THIS IN PRODUCTION - only for development
+                resetToken = token,
+                userId = user.Id
+            });
+        }
+
+        // ------------------------------------------------------------------
+        // RESET PASSWORD - Confirm with Token (POST /api/Auth/ResetPassword)
+        // ------------------------------------------------------------------
+        [HttpPost("ResetPassword")]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto model)
+        {
+            var user = await _userManager.FindByIdAsync(model.UserId);
+            if (user == null)
+            {
+                return BadRequest(new { message = "Invalid reset request." });
+            }
+
+            var result = await _userManager.ResetPasswordAsync(user, model.Token, model.NewPassword);
+            if (result.Succeeded)
+            {
+                return Ok(new { message = "Password has been reset successfully." });
+            }
+
+            return BadRequest(new { message = "Password reset failed.", errors = result.Errors });
+        }
+
+        // ------------------------------------------------------------------
+        // ADMIN: APPROVE USER (POST /api/Auth/ApproveUser/{userId})
+        // ------------------------------------------------------------------
+        [HttpPost("ApproveUser/{userId}")]
+        public async Task<IActionResult> ApproveUser(string userId)
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+            {
+                return NotFound(new { message = "User not found." });
+            }
+
+            user.IsApproved = true;
+            var result = await _userManager.UpdateAsync(user);
+            
+            if (result.Succeeded)
+            {
+                return Ok(new { message = "User approved successfully." });
+            }
+
+            return BadRequest(new { message = "Failed to approve user.", errors = result.Errors });
+        }
+
+        // ------------------------------------------------------------------
+        // ADMIN: REJECT USER (POST /api/Auth/RejectUser/{userId})
+        // ------------------------------------------------------------------
+        [HttpPost("RejectUser/{userId}")]
+        public async Task<IActionResult> RejectUser(string userId)
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+            {
+                return NotFound(new { message = "User not found." });
+            }
+
+            user.IsApproved = false;
+            var result = await _userManager.UpdateAsync(user);
+            
+            if (result.Succeeded)
+            {
+                return Ok(new { message = "User approval revoked." });
+            }
+
+            return BadRequest(new { message = "Failed to update user.", errors = result.Errors });
         }
     }
 
@@ -198,5 +291,25 @@ namespace eventra_api.Controllers
         [Required]
         [DataType(DataType.Password)]
         public string Password { get; set; } = string.Empty;
+    }
+
+    public class ForgotPasswordDto
+    {
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; } = string.Empty;
+    }
+
+    public class ResetPasswordDto
+    {
+        [Required]
+        public string UserId { get; set; } = string.Empty;
+        
+        [Required]
+        public string Token { get; set; } = string.Empty;
+        
+        [Required]
+        [DataType(DataType.Password)]
+        public string NewPassword { get; set; } = string.Empty;
     }
 }

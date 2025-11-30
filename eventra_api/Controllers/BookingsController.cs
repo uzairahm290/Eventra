@@ -46,7 +46,8 @@ namespace eventra_api.Controllers
                     TotalAmount = b.TotalAmount,
                     AmountPaid = b.AmountPaid,
                     IsCheckedIn = b.IsCheckedIn,
-                    QRCode = b.QRCode
+                    QRCode = b.QRCode,
+                    IsApprovedByAdmin = b.IsApprovedByAdmin
                 })
                 .ToListAsync();
 
@@ -82,7 +83,8 @@ namespace eventra_api.Controllers
                     TotalAmount = b.TotalAmount,
                     AmountPaid = b.AmountPaid,
                     IsCheckedIn = b.IsCheckedIn,
-                    QRCode = b.QRCode
+                    QRCode = b.QRCode,
+                    IsApprovedByAdmin = b.IsApprovedByAdmin
                 })
                 .ToListAsync();
 
@@ -120,7 +122,8 @@ namespace eventra_api.Controllers
                     TotalAmount = b.TotalAmount,
                     AmountPaid = b.AmountPaid,
                     IsCheckedIn = b.IsCheckedIn,
-                    QRCode = b.QRCode
+                    QRCode = b.QRCode,
+                    IsApprovedByAdmin = b.IsApprovedByAdmin
                 })
                 .ToListAsync();
 
@@ -402,6 +405,47 @@ namespace eventra_api.Controllers
             await _context.SaveChangesAsync();
 
             return Ok(new { message = "Booking cancelled successfully." });
+        }
+
+        // POST: api/Bookings/5/approve
+        [HttpPost("{id}/approve")]
+        public async Task<IActionResult> ApproveBooking(int id)
+        {
+            var booking = await _context.Bookings.FindAsync(id);
+            if (booking == null)
+            {
+                return NotFound(new { message = "Booking not found." });
+            }
+
+            if (booking.Status == BookingStatus.Cancelled)
+            {
+                return BadRequest(new { message = "Cannot approve a cancelled booking." });
+            }
+
+            booking.IsApprovedByAdmin = true;
+            booking.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Booking approved successfully." });
+        }
+
+        // POST: api/Bookings/5/reject
+        [HttpPost("{id}/reject")]
+        public async Task<IActionResult> RejectBooking(int id)
+        {
+            var booking = await _context.Bookings.FindAsync(id);
+            if (booking == null)
+            {
+                return NotFound(new { message = "Booking not found." });
+            }
+
+            booking.IsApprovedByAdmin = false;
+            booking.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Booking approval revoked." });
         }
 
         private string GenerateBookingReference()

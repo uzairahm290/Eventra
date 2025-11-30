@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
+import { apiService } from '../services/api';
 
 const ForgotPassword: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -20,13 +21,11 @@ const ForgotPassword: React.FC = () => {
     setLoading(true);
 
     try {
-      // Demo: simulate API call
-      await new Promise((r) => setTimeout(r, 800));
-      // In a real app, call the backend endpoint to send a reset link
+      await apiService.post('/Auth/ForgotPassword', { email });
       setSent(true);
-      toast.success('Password reset link sent! Check your email.');
-    } catch {
-      const msg = 'Failed to send reset link. Please try again later.';
+      toast.success('If an account with that email exists, a reset link has been sent.');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to send reset link. Please try again later.';
       setError(msg);
       toast.error(msg);
     } finally {
