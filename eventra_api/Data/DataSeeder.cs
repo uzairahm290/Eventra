@@ -12,8 +12,12 @@ namespace eventra_api.Data
             var userManager = serviceProvider.GetRequiredService<UserManager<ApplicationUser>>();
             var roleManager = serviceProvider.GetRequiredService<RoleManager<IdentityRole>>();
 
-            // Apply migrations
-            await context.Database.MigrateAsync();
+            // Apply migrations only when there are pending migrations
+            var pendingMigrations = await context.Database.GetPendingMigrationsAsync();
+            if (pendingMigrations.Any())
+            {
+                await context.Database.MigrateAsync();
+            }
 
             // Seed Roles and Users
             var admin = await SeedUsersAsync(userManager, roleManager);
