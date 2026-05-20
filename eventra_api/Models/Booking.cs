@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace eventra_api.Models
 {
@@ -15,11 +16,18 @@ namespace eventra_api.Models
     {
         public int Id { get; set; }
 
+        public int? TenantId { get; set; }
+        public Tenant? Tenant { get; set; }
+
         [Required]
         public int EventId { get; set; }
 
+        // Client who is booking (external person — no system login)
         [Required]
-        public string UserId { get; set; } = string.Empty;
+        public int ClientId { get; set; }
+
+        // Hall where the event/booking takes place
+        public int? HallId { get; set; }
 
         [Required]
         [MaxLength(100)]
@@ -29,12 +37,15 @@ namespace eventra_api.Models
 
         public BookingStatus Status { get; set; } = BookingStatus.Pending;
 
-        public int NumberOfTickets { get; set; } = 1;
+        public int NumberOfGuests { get; set; } = 1;
 
-        [Range(0, 999999.99)]
+        [Column(TypeName = "decimal(18,2)")]
         public decimal TotalAmount { get; set; }
 
-        [Range(0, 999999.99)]
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal DepositAmount { get; set; } = 0;
+
+        [Column(TypeName = "decimal(18,2)")]
         public decimal AmountPaid { get; set; } = 0;
 
         public DateTime? PaymentDate { get; set; }
@@ -44,9 +55,6 @@ namespace eventra_api.Models
 
         [MaxLength(200)]
         public string? TransactionId { get; set; }
-
-        [MaxLength(500)]
-        public string? QRCode { get; set; } // For check-in
 
         public bool IsCheckedIn { get; set; } = false;
 
@@ -64,10 +72,15 @@ namespace eventra_api.Models
 
         public DateTime? UpdatedAt { get; set; }
 
-        public bool IsApprovedByAdmin { get; set; } = false; // Requires admin approval
+        public bool IsApprovedByAdmin { get; set; } = false;
+
+        // Who created this booking (system user — Owner or Manager)
+        public string? CreatedByUserId { get; set; }
 
         // Navigation properties
         public Event Event { get; set; } = null!;
-        public ApplicationUser User { get; set; } = null!;
+        public Client Client { get; set; } = null!;
+        public Hall? Hall { get; set; }
+        public ICollection<Notification> Notifications { get; set; } = new List<Notification>();
     }
 }

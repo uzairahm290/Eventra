@@ -7,6 +7,9 @@ namespace eventra_api.Models
     {
         public int Id { get; set; }
 
+        public int? TenantId { get; set; }
+        public Tenant? Tenant { get; set; }
+
         [Required]
         [MaxLength(100)]
         public string FirstName { get; set; } = string.Empty;
@@ -32,6 +35,11 @@ namespace eventra_api.Models
 
         public DateTime DateRegistered { get; set; } = DateTime.UtcNow;
 
+        [MaxLength(20)]
+        public string? CNIC { get; set; }
+
         public bool IsActive { get; set; } = true;
+
+        public ICollection<Booking> Bookings { get; set; } = new List<Booking>();
     }
 }

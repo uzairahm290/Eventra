@@ -16,5 +16,8 @@ namespace eventra_api.Models
         [Required]
         [DataType(DataType.Password)]
         public string Password { get; set; } = string.Empty;
+
+        // Multi-Tenancy support: if provided, create a business
+        public string? BusinessName { get; set; }
     }
 }

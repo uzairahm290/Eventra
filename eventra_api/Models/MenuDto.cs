@@ -2,11 +2,10 @@ using System.ComponentModel.DataAnnotations;
 
 namespace eventra_api.Models
 {
-    // DTO for creating a menu
     public class CreateMenuDto
     {
-        // Optional - menu can be created as catalog item without being assigned to event
-        public int? EventId { get; set; }
+        [Required]
+        public int VenueId { get; set; }
 
         [Required]
         [MaxLength(200)]
@@ -25,20 +24,18 @@ namespace eventra_api.Models
         public int MinimumGuests { get; set; } = 1;
 
         public bool IsVegetarian { get; set; } = false;
-
         public bool IsVegan { get; set; } = false;
-
         public bool IsGlutenFree { get; set; } = false;
 
         [MaxLength(500)]
         public string? AllergenInfo { get; set; }
     }
 
-    // DTO for menu response
     public class MenuDto
     {
         public int Id { get; set; }
-        public int? EventId { get; set; }
+        public int VenueId { get; set; }
+        public string VenueName { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
         public string? Category { get; set; }
         public string? Description { get; set; }
@@ -51,9 +48,10 @@ namespace eventra_api.Models
         public bool IsAvailable { get; set; }
     }
 
-    // DTO to assign existing menus to an event
+    // Assign menus from a Marque's catalog to a specific event
     public class AssignMenusDto
     {
         public List<int> MenuIds { get; set; } = new List<int>();
+        public int? GuestCount { get; set; }
     }
 }

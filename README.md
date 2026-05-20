@@ -1,128 +1,187 @@
 # Eventra
 
-Eventra is a full-stack event management application with a React + Vite frontend and an ASP.NET Core backend API.
+Marquee & wedding hall management SaaS for Pakistani businesses. Manage Marques (venues), Halls, Bookings, Clients, Workers, Attendance, Menus, and Events from one dashboard.
+
+**Stack:** React 19 + TypeScript + Tailwind CSS v4 + Vite 7 (frontend) · ASP.NET Core 8 + EF Core + SQLite (backend)
+
+---
+
+## Quick Start
+
+Open two terminals:
+
+**Terminal 1 — Backend API**
+```bash
+cd eventra_api
+dotnet run
+# API starts at http://localhost:5152
+```
+
+**Terminal 2 — Frontend**
+```bash
+cd eventra_app
+npm install   # first time only
+npm run dev
+# App starts at http://localhost:5173
+```
+
+Open **http://localhost:5173** in your browser. The frontend proxies all `/api/*` requests to the backend automatically.
+
+---
+
+## Seeded Login Credentials
+
+Demo credentials are stored in `.env.example` at the project root. Copy it to `.env` for local use:
+
+```bash
+cp .env.example .env
+```
+
+The Owner account has full access to all venues. Each Manager account is scoped to their assigned Marque.
+
+---
+
+## Seeded Demo Data
+
+The database is auto-seeded on first run with realistic Pakistani marquee data:
+
+- **3 Marques (Venues)** — Lahore, Karachi, Islamabad
+- **9 Halls** — Main Banquet Hall, Mehndi Lawn, VIP Lounge per venue
+- **30 Workers** — 10 per venue (cooks, waiters, security, cleaners, accountants, drivers) with CNICs
+- **15 Clients** — Pakistani names, CNICs, phone numbers
+- **8 Events** — Walimas, Mehndi nights, Nikkah, corporate dinners, birthday gala
+- **8 Bookings** — Mix of Confirmed / Pending / Cancelled, PKR amounts (₨49K–₨1.44M)
+- **Menus** — 5 packages per venue (Silver Walima, Gold Wedding, Mehndi BBQ, Hi-Tea, Vegetarian)
+- **Attendance** — Last 7 days for all 30 workers
+
+---
+
+## Project Structure
+
+```
+Eventra/
+├── eventra_app/          # React + Vite frontend
+│   ├── src/
+│   │   ├── pages/        # Landing, Dashboard, Events, Bookings, Halls, Workers, Attendance, ...
+│   │   ├── components/   # Shared UI components
+│   │   ├── services/     # API service functions (api.ts, hallService.ts, ...)
+│   │   └── context/      # AuthContext (JWT decode, role-aware)
+│   ├── vercel.json       # SPA rewrite rule for Vercel deployment
+│   └── vite.config.ts    # Dev proxy: /api → http://localhost:5152
+│
+└── eventra_api/          # ASP.NET Core 8 Web API
+    ├── Controllers/       # Auth, Venues, Halls, Bookings, Clients, Workers, Attendance, Menus, Events, Reports, Upload
+    ├── Models/            # EF Core entities + DTOs
+    ├── Data/              # AppDbContext + DataSeeder
+    ├── Services/          # TokenService, MarqueScopeService
+    └── Migrations/        # EF Core SQLite migrations
+```
+
+---
+
+## Roles & Permissions
+
+| Action | Owner | Manager |
+|--------|-------|---------|
+| View/manage all Marques | Yes | Own Marque only |
+| Create / delete Marques | Yes | No |
+| Create / delete Halls | Yes | Own Marque only |
+| Manage Workers & Attendance | Yes | Own Marque only |
+| Create / approve Bookings | Yes | Own Marque only |
+| Approve Manager registrations | Yes | No |
+| View Reports | Yes | Own Marque only |
+
+---
+
+## Environment Variables
+
+### Backend (`eventra_api/appsettings.Development.json`)
+```json
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Data Source=EventraDB.db;"
+  },
+  "Jwt": {
+    "Key": "your-secret-key-min-32-chars",
+    "Issuer": "EventraAPI",
+    "Audience": "EventraApp"
+  }
+}
+```
+
+### Frontend (`eventra_app/.env.local`) — optional
+```
+VITE_API_BASE_URL=            # leave empty for dev (proxy handles it)
+VITE_GOOGLE_CLIENT_ID=        # set to enable Google login button
+```
+
+### Production optional features
+| Variable | Purpose |
+|----------|---------|
+| `Cloudinary__CloudName` | Enable Cloudinary image uploads |
+| `Cloudinary__ApiKey` | (required with CloudName) |
+| `Cloudinary__ApiSecret` | (required with CloudName) |
+| `Google__ClientId` | Validate Google ID tokens server-side |
+| `AllowedOrigins` | Comma-separated production frontend URLs for CORS |
+
+---
+
+## Prerequisites
+
+| Tool | Version |
+|------|---------|
+| .NET SDK | 8.0+ |
+| Node.js | 18+ |
+| npm | 9+ |
+
+---
+
+## Database
+
+SQLite is used in development. The DB file (`EventraDB.db`) is created automatically on first run in the `eventra_api/` directory. No manual migration commands are needed — migrations apply and seeding runs at startup.
+
+To reset the database and re-seed:
+```bash
+rm eventra_api/EventraDB.db
+dotnet run --project eventra_api
+```
+
+---
+
+## Deployment
+
+**Frontend → Vercel**
+1. Connect the `eventra_app/` directory to a Vercel project.
+2. Set `VITE_API_BASE_URL` to your backend URL.
+3. `vercel.json` already includes the SPA rewrite rule.
+
+**Backend → Any host supporting .NET 8**
+```bash
+cd eventra_api
+dotnet publish -c Release -o ./publish
+```
+Set production env vars: `Jwt__Key`, `ConnectionStrings__DefaultConnection`, `AllowedOrigins`.
+
+---
 
 ## Repository
 
 GitHub: [uzairahm290/Eventra](https://github.com/uzairahm290/Eventra.git)
 
-## Cloning the Repository
-
-Clone the repository using:
-
-```sh
+```bash
 git clone https://github.com/uzairahm290/Eventra.git
 ```
-
-## Project Structure
-
-- `eventra_app/` - Frontend (React + Vite)
-- `eventra_api/` - Backend (ASP.NET Core Web API)
-
----
-
-
-## Frontend Setup (`eventra_app`)
-
-### Prerequisites
-- Node.js (v18+ recommended)
-- npm (comes with Node.js)
-
-### Installation
-
-1. Navigate to the frontend directory:
-   ```sh
-   cd eventra_app
-   ```
-2. Install dependencies:
-   ```sh
-   npm install
-   ```
-3. Start the development server:
-   ```sh
-   npm run dev
-   ```
-4. Open [http://localhost:5173](http://localhost:5173) in your browser.
-
-#### API Proxy Configuration
-The frontend proxies API requests to the backend at `http://localhost:5152` (see `vite.config.ts`). We now use the HTTP profile for simplicity. If you run the HTTPS profile the backend will also be available at `https://localhost:7079`, but the frontend proxy targets the HTTP port.
-
----
-
-
-## Backend Setup (`eventra_api`)
-
-### Prerequisites
-- Visual Studio 2022 (latest) with the "ASP.NET and web development" workload
-- .NET 8 SDK (installed automatically by VS if selected)
-
-### Run the Backend (Visual Studio Only)
-1. Open the solution: `eventra_api/eventra_api.sln` in Visual Studio.
-2. VS automatically restores all NuGet packages on load (no CLI needed).
-3. Press `F5` (Debug) or `Ctrl+F5` (Run without debug).
-4. The API starts on `http://localhost:5152` (HTTP profile). An HTTPS endpoint (`https://localhost:7079`) also exists but is not used by the frontend proxy.
-
-### Database & Migrations
-The first run automatically applies EF Core migrations and seeds development data (admin user + sample events). No manual `dotnet ef` commands are required when using Visual Studio.
-
-Development connection string (LocalDB):
-```
-Server=(localdb)\\MSSQLLocalDB;Database=EventraDB;Trusted_Connection=True;TrustServerCertificate=True;
-```
-
-If you need to add a new migration later:
-1. Open the Package Manager Console in Visual Studio.
-2. Set Default Project to `eventra_api`.
-3. Run:
-```
-Add-Migration YourMigrationName
-Update-Database
-```
-
-### NuGet Package Consistency
-All developers use the same package versions defined in `eventra_api.csproj`. Visual Studio handles restore automatically. To enforce locked versions across the team you can (optional):
-1. Enable package lock: add `<RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>` to a `Directory.Build.props` or create a `packages.lock.json` by running a restore once.
-2. Commit the generated `packages.lock.json` file.
-
-This ensures reproducible restores without needing CLI scripts.
-
----
-
-## Environment Configuration
-
-- Frontend: Edit environment variables in `.env` (if present).
-- Backend: Configure settings in `appsettings.json` and `appsettings.Development.json`.
-
----
-
-## Frontend & Backend Startup Flow
-
-1. Start backend via Visual Studio (`F5`).
-2. In another terminal start frontend:
-   ```powershell
-   cd eventra_app
-   npm install
-   npm run dev
-   ```
-3. Sign in using seeded development admin credentials.
-
-### Seeded Development Data
-
-When running in `Development` mode this app will automatically apply migrations and seed a small set of development data (admin user + sample events). The seeded admin credentials are:
-
-- Email: `dev@eventra.local`
-- Username: `devadmin`
-- Password: `Dev@12345!`
-
-Use these credentials to sign in after starting the API and frontend.
-
----
-
-## Additional Notes
-- Make sure both frontend and backend are running for full functionality.
-- For production builds, use `npm run build` (frontend) and `dotnet publish` (backend).
 
 ---
 
 ## License
+
 MIT
+
+
+Role	Email	Password
+Owner	owner@eventra.pk	Owner@12345!
+Manager (Al-Noor, Lahore)	ali.manager@eventra.pk	Manager@12345!
+Manager (Pearl Continental, Karachi)	sara.manager@eventra.pk	Manager@12345!
+Manager (Rawal Garden, Islamabad)	usman.manager@eventra.pk	Manager@12345!
+Data seeded:

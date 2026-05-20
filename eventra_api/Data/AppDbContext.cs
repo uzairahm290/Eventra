@@ -1,37 +1,99 @@
-﻿using eventra_api.Models;
+using eventra_api.Models;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
-using System.Collections.Generic;
-using System.Reflection.Emit;
+using eventra_api.Services;
 
 namespace eventra_api.Data
 {
     public class AppDbContext : IdentityDbContext<ApplicationUser>
     {
-        public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
+        private readonly ITenantProvider? _tenantProvider;
+
+        public AppDbContext(DbContextOptions<AppDbContext> options, ITenantProvider? tenantProvider = null) : base(options)
         {
+            _tenantProvider = tenantProvider;
         }
 
-        // DbSets for all entities
+        public DbSet<Tenant> Tenants { get; set; }
         public DbSet<Event> Events { get; set; }
         public DbSet<Venue> Venues { get; set; }
+        public DbSet<Hall> Halls { get; set; }
         public DbSet<EventAttendee> EventAttendees { get; set; }
         public DbSet<Menu> Menus { get; set; }
+        public DbSet<EventMenu> EventMenus { get; set; }
         public DbSet<Booking> Bookings { get; set; }
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<RefreshToken> RefreshTokens { get; set; }
         public DbSet<AuditLog> AuditLogs { get; set; }
         public DbSet<Client> Clients { get; set; }
         public DbSet<Worker> Workers { get; set; }
+        public DbSet<Attendance> Attendances { get; set; }
+
+        public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        {
+            var tenantId = _tenantProvider?.GetTenantId();
+            if (tenantId.HasValue)
+            {
+                foreach (var entry in ChangeTracker.Entries()
+                    .Where(e => e.State == EntityState.Added || e.State == EntityState.Modified))
+                {
+                    var tenantIdProp = entry.Entity.GetType().GetProperty("TenantId");
+                    if (tenantIdProp != null)
+                        tenantIdProp.SetValue(entry.Entity, tenantId.Value);
+                }
+            }
+            return base.SaveChangesAsync(cancellationToken);
+        }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
 
-            // Configure relationships and constraints
+            // ── Global Query Filters (Multi-Tenancy) ─────────────────────────
+            builder.Entity<Event>().HasQueryFilter(e =>
+                _tenantProvider == null || !_tenantProvider.GetTenantId().HasValue ||
+                e.TenantId == _tenantProvider.GetTenantId());
 
-            // Event relationships
+            builder.Entity<Venue>().HasQueryFilter(v =>
+                _tenantProvider == null || !_tenantProvider.GetTenantId().HasValue ||
+                v.TenantId == _tenantProvider.GetTenantId());
+
+            builder.Entity<Hall>().HasQueryFilter(h =>
+                _tenantProvider == null || !_tenantProvider.GetTenantId().HasValue ||
+                h.TenantId == _tenantProvider.GetTenantId());
+
+            builder.Entity<Booking>().HasQueryFilter(b =>
+                _tenantProvider == null || !_tenantProvider.GetTenantId().HasValue ||
+                b.TenantId == _tenantProvider.GetTenantId());
+
+            builder.Entity<Menu>().HasQueryFilter(m =>
+                _tenantProvider == null || !_tenantProvider.GetTenantId().HasValue ||
+                m.TenantId == _tenantProvider.GetTenantId());
+
+            builder.Entity<Client>().HasQueryFilter(c =>
+                _tenantProvider == null || !_tenantProvider.GetTenantId().HasValue ||
+                c.TenantId == _tenantProvider.GetTenantId());
+
+            builder.Entity<Worker>().HasQueryFilter(w =>
+                _tenantProvider == null || !_tenantProvider.GetTenantId().HasValue ||
+                w.TenantId == _tenantProvider.GetTenantId());
+
+            builder.Entity<ApplicationUser>().HasQueryFilter(u =>
+                _tenantProvider == null || !_tenantProvider.GetTenantId().HasValue ||
+                u.TenantId == _tenantProvider.GetTenantId());
+
+            // ── Hall ──────────────────────────────────────────────────────────
+            builder.Entity<Hall>()
+                .HasOne(h => h.Venue)
+                .WithMany(v => v.Halls)
+                .HasForeignKey(h => h.VenueId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<Hall>()
+                .Property(h => h.PricePerHour)
+                .HasPrecision(18, 2);
+
+            // ── Event ─────────────────────────────────────────────────────────
             builder.Entity<Event>()
                 .HasOne(e => e.Venue)
                 .WithMany(v => v.Events)
@@ -44,7 +106,17 @@ namespace eventra_api.Data
                 .HasForeignKey(e => e.CreatedBy)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // EventAttendee relationships
+            builder.Entity<Event>()
+                .HasOne(e => e.Hall)
+                .WithMany(h => h.Events)
+                .HasForeignKey(e => e.HallId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            builder.Entity<Event>()
+                .Property(e => e.TicketPrice)
+                .HasPrecision(18, 2);
+
+            // ── EventAttendee ─────────────────────────────────────────────────
             builder.Entity<EventAttendee>()
                 .HasOne(ea => ea.Event)
                 .WithMany(e => e.Attendees)
@@ -57,19 +129,38 @@ namespace eventra_api.Data
                 .HasForeignKey(ea => ea.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // Unique constraint: one registration per user per event
             builder.Entity<EventAttendee>()
                 .HasIndex(ea => new { ea.EventId, ea.UserId })
                 .IsUnique();
 
-            // Menu relationships
+            // ── Menu (now Venue-scoped) ───────────────────────────────────────
             builder.Entity<Menu>()
-                .HasOne(m => m.Event)
-                .WithMany(e => e.Menus)
-                .HasForeignKey(m => m.EventId)
+                .HasOne(m => m.Venue)
+                .WithMany(v => v.Menus)
+                .HasForeignKey(m => m.VenueId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // Booking relationships
+            builder.Entity<Menu>()
+                .Property(m => m.PricePerPerson)
+                .HasPrecision(18, 2);
+
+            // ── EventMenu (junction) ──────────────────────────────────────────
+            builder.Entity<EventMenu>()
+                .HasKey(em => new { em.EventId, em.MenuId });
+
+            builder.Entity<EventMenu>()
+                .HasOne(em => em.Event)
+                .WithMany(e => e.EventMenus)
+                .HasForeignKey(em => em.EventId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<EventMenu>()
+                .HasOne(em => em.Menu)
+                .WithMany(m => m.EventMenus)
+                .HasForeignKey(em => em.MenuId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // ── Booking (now Client-based) ────────────────────────────────────
             builder.Entity<Booking>()
                 .HasOne(b => b.Event)
                 .WithMany(e => e.Bookings)
@@ -77,17 +168,34 @@ namespace eventra_api.Data
                 .OnDelete(DeleteBehavior.Restrict);
 
             builder.Entity<Booking>()
-                .HasOne(b => b.User)
-                .WithMany(u => u.Bookings)
-                .HasForeignKey(b => b.UserId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .HasOne(b => b.Client)
+                .WithMany(c => c.Bookings)
+                .HasForeignKey(b => b.ClientId)
+                .OnDelete(DeleteBehavior.Restrict);
 
-            // Unique booking reference
+            builder.Entity<Booking>()
+                .HasOne(b => b.Hall)
+                .WithMany(h => h.Bookings)
+                .HasForeignKey(b => b.HallId)
+                .OnDelete(DeleteBehavior.SetNull);
+
             builder.Entity<Booking>()
                 .HasIndex(b => b.BookingReference)
                 .IsUnique();
 
-            // Notification relationships
+            builder.Entity<Booking>()
+                .Property(b => b.TotalAmount)
+                .HasPrecision(18, 2);
+
+            builder.Entity<Booking>()
+                .Property(b => b.DepositAmount)
+                .HasPrecision(18, 2);
+
+            builder.Entity<Booking>()
+                .Property(b => b.AmountPaid)
+                .HasPrecision(18, 2);
+
+            // ── Notification ──────────────────────────────────────────────────
             builder.Entity<Notification>()
                 .HasOne(n => n.User)
                 .WithMany(u => u.Notifications)
@@ -102,11 +210,11 @@ namespace eventra_api.Data
 
             builder.Entity<Notification>()
                 .HasOne(n => n.Booking)
-                .WithMany()
+                .WithMany(b => b.Notifications)
                 .HasForeignKey(n => n.BookingId)
                 .OnDelete(DeleteBehavior.NoAction);
 
-            // RefreshToken relationships
+            // ── RefreshToken ──────────────────────────────────────────────────
             builder.Entity<RefreshToken>()
                 .HasOne(rt => rt.User)
                 .WithMany(u => u.RefreshTokens)
@@ -117,40 +225,47 @@ namespace eventra_api.Data
                 .HasIndex(rt => rt.Token)
                 .IsUnique();
 
-            // AuditLog relationships
+            // ── AuditLog ──────────────────────────────────────────────────────
             builder.Entity<AuditLog>()
                 .HasOne(al => al.User)
                 .WithMany(u => u.AuditLogs)
                 .HasForeignKey(al => al.UserId)
                 .OnDelete(DeleteBehavior.SetNull);
 
-            // Decimal precision for monetary values
-            builder.Entity<Event>()
-                .Property(e => e.TicketPrice)
+            // ── Worker ────────────────────────────────────────────────────────
+            builder.Entity<Worker>()
+                .HasOne(w => w.Venue)
+                .WithMany(v => v.Workers)
+                .HasForeignKey(w => w.VenueId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<Worker>()
+                .Property(w => w.DailySalary)
                 .HasPrecision(18, 2);
 
+            // ── Attendance ────────────────────────────────────────────────────
+            builder.Entity<Attendance>()
+                .HasOne(a => a.Worker)
+                .WithMany(w => w.Attendances)
+                .HasForeignKey(a => a.WorkerId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // One attendance record per worker per day
+            builder.Entity<Attendance>()
+                .HasIndex(a => new { a.WorkerId, a.Date })
+                .IsUnique();
+
+            // ── ApplicationUser → Venue (Manager scoping) ────────────────────
+            builder.Entity<ApplicationUser>()
+                .HasOne(u => u.Venue)
+                .WithMany()
+                .HasForeignKey(u => u.VenueId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // ── Venue decimal ─────────────────────────────────────────────────
             builder.Entity<Venue>()
                 .Property(v => v.PricePerHour)
                 .HasPrecision(18, 2);
-
-            builder.Entity<Menu>()
-                .Property(m => m.PricePerPerson)
-                .HasPrecision(18, 2);
-
-            builder.Entity<Booking>()
-                .Property(b => b.TotalAmount)
-                .HasPrecision(18, 2);
-
-            builder.Entity<Booking>()
-                .Property(b => b.AmountPaid)
-                .HasPrecision(18, 2);
-
-            // Worker relationships
-            builder.Entity<Worker>()
-                .HasOne(w => w.Venue)
-                .WithMany()
-                .HasForeignKey(w => w.VenueId)
-                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }

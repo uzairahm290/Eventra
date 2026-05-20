@@ -6,15 +6,19 @@ namespace eventra_api.Models
     {
         public int Id { get; set; }
 
-        // EventId is now optional - menus are catalog items that can be assigned to events
-        public int? EventId { get; set; }
+        public int? TenantId { get; set; }
+        public Tenant? Tenant { get; set; }
+
+        // Menus belong to a Marque (Venue), not to individual events
+        [Required]
+        public int VenueId { get; set; }
 
         [Required]
         [MaxLength(200)]
         public string Name { get; set; } = string.Empty;
 
         [MaxLength(100)]
-        public string? Category { get; set; } // e.g., "Appetizer", "Main Course", "Dessert", "Beverage"
+        public string? Category { get; set; }
 
         [MaxLength(1000)]
         public string? Description { get; set; }
@@ -37,7 +41,8 @@ namespace eventra_api.Models
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-        // Navigation property - nullable since menus can exist without being assigned to an event
-        public Event? Event { get; set; }
+        // Navigation
+        public Venue Venue { get; set; } = null!;
+        public ICollection<EventMenu> EventMenus { get; set; } = new List<EventMenu>();
     }
 }

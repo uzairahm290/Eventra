@@ -15,10 +15,16 @@ namespace eventra_api.Models
         public bool IsActive { get; set; } = true;
         public bool IsApproved { get; set; } = false; // Admin approval required
 
+        public int? TenantId { get; set; }
+        public Tenant? Tenant { get; set; }
+
+        // VenueId: null for Owner (sees all marques), set for Manager (scoped to one marque)
+        public int? VenueId { get; set; }
+        public Venue? Venue { get; set; }
+
         // Navigation properties
         public ICollection<Event> CreatedEvents { get; set; } = new List<Event>();
         public ICollection<EventAttendee> EventAttendees { get; set; } = new List<EventAttendee>();
-        public ICollection<Booking> Bookings { get; set; } = new List<Booking>();
         public ICollection<Notification> Notifications { get; set; } = new List<Notification>();
         public ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
         public ICollection<AuditLog> AuditLogs { get; set; } = new List<AuditLog>();

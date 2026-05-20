@@ -6,6 +6,9 @@ namespace eventra_api.Models
     {
         public int Id { get; set; }
 
+        public int? TenantId { get; set; }
+        public Tenant? Tenant { get; set; }
+
         [Required]
         [MaxLength(200)]
         public string Name { get; set; } = string.Empty;
@@ -45,7 +48,10 @@ namespace eventra_api.Models
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;        public DateTime? UpdatedAt { get; set; }
 
-        // Navigation property
+        // Navigation properties
         public ICollection<Event> Events { get; set; } = new List<Event>();
+        public ICollection<Hall> Halls { get; set; } = new List<Hall>();
+        public ICollection<Menu> Menus { get; set; } = new List<Menu>();
+        public ICollection<Worker> Workers { get; set; } = new List<Worker>();
     }
 }

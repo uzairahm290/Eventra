@@ -11,6 +11,9 @@ public partial class Event
     [Key]
     public int Id { get; set; }
 
+    public int? TenantId { get; set; }
+    public Tenant? Tenant { get; set; }
+
     [Required]
     [StringLength(200)]
     public string Title { get; set; } = null!;
@@ -79,9 +82,13 @@ public partial class Event
     public string? UpdatedBy { get; set; }
     public DateTime? UpdatedAt { get; set; }
 
+    // Hall (room within a Marque) where this event takes place
+    public int? HallId { get; set; }
+    public virtual Hall? Hall { get; set; }
+
     // Navigation Properties
     public virtual ICollection<EventAttendee> Attendees { get; set; } = new List<EventAttendee>();
-    public virtual ICollection<Menu> Menus { get; set; } = new List<Menu>();
+    public virtual ICollection<EventMenu> EventMenus { get; set; } = new List<EventMenu>();
     public virtual ICollection<Booking> Bookings { get; set; } = new List<Booking>();
     public virtual ICollection<Notification> Notifications { get; set; } = new List<Notification>();
 }
