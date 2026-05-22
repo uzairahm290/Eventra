@@ -20,7 +20,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add DbContext for database connection (Entity Framework Core)
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // NEW: Add and Configure ASP.NET Core Identity Services
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
@@ -59,6 +59,8 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<eventra_api.Services.ITenantProvider, eventra_api.Services.TenantProvider>();
 
 // Add services for Controllers with JSON options
 builder.Services.AddControllers()
@@ -91,12 +93,18 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 
-// Allow requests from Vite (localhost:5173) - (Your existing CORS policy)
+// CORS: dev (Vite) + any production origins listed in AllowedOrigins config / env var
+// In production set: AllowedOrigins=https://your-app.vercel.app  (comma-separated for multiple)
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowVite", policy =>
     {
-        policy.WithOrigins("http://localhost:5173")
+        var origins = new System.Collections.Generic.List<string> { "http://localhost:5173" };
+        var prodOrigins = builder.Configuration["AllowedOrigins"];
+        if (!string.IsNullOrWhiteSpace(prodOrigins))
+            origins.AddRange(prodOrigins.Split(',', System.StringSplitOptions.TrimEntries | System.StringSplitOptions.RemoveEmptyEntries));
+
+        policy.WithOrigins([.. origins])
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();

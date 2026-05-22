@@ -20,40 +20,44 @@ namespace eventra_api.Services
 
         public string CreateToken(ApplicationUser user)
         {
-            // 1. Define Claims (data about the user to embed in the token)
+            return CreateTokenAsync(user).GetAwaiter().GetResult();
+        }
+
+        public async Task<string> CreateTokenAsync(ApplicationUser user)
+        {
             var claims = new List<Claim>
             {
-                new Claim(ClaimTypes.NameIdentifier, user.Id), // User ID
+                new Claim(ClaimTypes.NameIdentifier, user.Id),
                 new Claim(ClaimTypes.Email, user.Email!),
                 new Claim(ClaimTypes.GivenName, user.FirstName),
                 new Claim(ClaimTypes.Surname, user.SecondName)
             };
 
-            // Add user roles to claims
-            var roles = _userManager.GetRolesAsync(user).Result;
-            foreach (var role in roles)
-            {
-                claims.Add(new Claim(ClaimTypes.Role, role));
-            }
+            if (user.TenantId.HasValue)
+                claims.Add(new Claim("TenantId", user.TenantId.Value.ToString()));
 
-            // 2. Get Secret Key and Security Credential
+            // VenueId claim for Manager role scoping
+            if (user.VenueId.HasValue)
+                claims.Add(new Claim("VenueId", user.VenueId.Value.ToString()));
+
+            var roles = await _userManager.GetRolesAsync(user);
+            foreach (var role in roles)
+                claims.Add(new Claim(ClaimTypes.Role, role));
+
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]!));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha512Signature);
 
-            // 3. Define Token Properties
             var tokenDescriptor = new SecurityTokenDescriptor
             {
                 Subject = new ClaimsIdentity(claims),
-                Expires = DateTime.Now.AddDays(7), // Token valid for 7 days
+                Expires = DateTime.UtcNow.AddDays(7),
                 SigningCredentials = creds,
                 Issuer = _config["Jwt:Issuer"],
                 Audience = _config["Jwt:Audience"]
             };
 
-            // 4. Create and Write the Token
             var tokenHandler = new JwtSecurityTokenHandler();
             var token = tokenHandler.CreateToken(tokenDescriptor);
-
             return tokenHandler.WriteToken(token);
         }
     }
