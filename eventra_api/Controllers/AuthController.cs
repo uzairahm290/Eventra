@@ -1,12 +1,15 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Authorization;
 using eventra_api.Models;
-using eventra_api.Services; // Required for TokenService
+using eventra_api.Services;
 using System.Threading.Tasks;
 using System.Linq;
-using System.ComponentModel.DataAnnotations; // Required for DTOs
+using System.ComponentModel.DataAnnotations;
 using System.Collections.Generic;
 using System.Net;
+using System.Net.Http.Json;
+using System.Text.Json.Serialization;
 
 namespace eventra_api.Controllers
 {
@@ -18,18 +21,23 @@ namespace eventra_api.Controllers
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly TokenService _tokenService;
         private readonly IEmailService _emailService;
+        private readonly eventra_api.Data.AppDbContext _context;
+        private readonly IConfiguration _config;
 
-        // Dependency Injection: Gets the necessary Identity and Token services
         public AuthController(
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
             TokenService tokenService,
-            IEmailService emailService)
+            IEmailService emailService,
+            eventra_api.Data.AppDbContext context,
+            IConfiguration config)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _tokenService = tokenService;
             _emailService = emailService;
+            _context = context;
+            _config = config;
         }
 
         // ------------------------------------------------------------------
@@ -68,10 +76,30 @@ namespace eventra_api.Controllers
 
             if (result.Succeeded)
             {
-                // Assign default User role
-                await _userManager.AddToRoleAsync(user, "User");
+                // Multi-tenancy support
+                string roleToAssign = "Manager";
+                if (!string.IsNullOrEmpty(model.BusinessName))
+                {
+                    var tenant = new Tenant
+                    {
+                        Name = model.BusinessName,
+                        ContactEmail = model.UserMail
+                    };
+                    _context.Tenants.Add(tenant);
+                    await _context.SaveChangesAsync();
+
+                    user.TenantId = tenant.Id;
+                    user.IsApproved = true; // Owner is auto-approved
+                    await _userManager.UpdateAsync(user);
+
+                    roleToAssign = "Owner";
+                }
+
+                // Call RoleManager to ensure basic roles exist
+                await _userManager.AddToRoleAsync(user, roleToAssign);
+                
                 var roles = await _userManager.GetRolesAsync(user);
-                var token = _tokenService.CreateToken(user);
+                var token = await _tokenService.CreateTokenAsync(user);
 
                 return Ok(new
                 {
@@ -82,11 +110,12 @@ namespace eventra_api.Controllers
                         id = user.Id,
                         email = user.Email,
                         firstName = user.FirstName,
-                        // Use the actual ApplicationUser property name (LastName)
                         lastName = user.SecondName,
                         dateRegistered = user.DateRegistered,
                         profileImageBase64 = user.ProfileImageBase64,
-                        role = roles.FirstOrDefault() ?? "User"
+                        role = roles.FirstOrDefault() ?? "Manager",
+                        venueId = user.VenueId,
+                        tenantId = user.TenantId
                     }
                 });
             }
@@ -134,22 +163,23 @@ namespace eventra_api.Controllers
             if (result.Succeeded)
             {
                 var roles = await _userManager.GetRolesAsync(user);
-                var token = _tokenService.CreateToken(user);
+                var token = await _tokenService.CreateTokenAsync(user);
 
                 return Ok(new
                 {
                     message = "Login successful!",
-                    token = token, // <-- JWT Token
+                    token = token,
                     user = new
                     {
                         id = user.Id,
                         email = user.Email,
                         firstName = user.FirstName,
-                        // Use the actual ApplicationUser property name (LastName)
                         lastName = user.SecondName,
                         dateRegistered = user.DateRegistered,
                         profileImageBase64 = user.ProfileImageBase64,
-                        role = roles.FirstOrDefault() ?? "User"
+                        role = roles.FirstOrDefault() ?? "Manager",
+                        venueId = user.VenueId,
+                        tenantId = user.TenantId
                     }
                 });
             }
@@ -158,9 +188,10 @@ namespace eventra_api.Controllers
         }
 
         // ------------------------------------------------------------------
-        // GET ALL USERS (GET /api/Auth/Users)
+        // GET ALL USERS (GET /api/Auth/Users) - Owner only
         // ------------------------------------------------------------------
         [HttpGet("Users")]
+        [Authorize(Roles = "Owner")]
         public IActionResult GetAllUsers()
         {
             var users = _userManager.Users.ToList();
@@ -175,12 +206,13 @@ namespace eventra_api.Controllers
                 id = u.Id,
                 email = u.Email,
                 firstName = u.FirstName,
-                // Use the actual ApplicationUser property name (LastName)
                 lastName = u.SecondName,
                 dateRegistered = u.DateRegistered,
                 userName = u.UserName,
                 isApproved = u.IsApproved,
-                role = _userManager.GetRolesAsync(u).Result.FirstOrDefault() ?? "User"
+                venueId = u.VenueId,
+                tenantId = u.TenantId,
+                role = _userManager.GetRolesAsync(u).Result.FirstOrDefault() ?? "Manager"
             }).ToList();
 
             return Ok(new { message = "Users retrieved successfully!", users = userList });
@@ -237,9 +269,10 @@ namespace eventra_api.Controllers
         }
 
         // ------------------------------------------------------------------
-        // ADMIN: APPROVE USER (POST /api/Auth/ApproveUser/{userId})
+        // OWNER: APPROVE USER (POST /api/Auth/ApproveUser/{userId})
         // ------------------------------------------------------------------
         [HttpPost("ApproveUser/{userId}")]
+        [Authorize(Roles = "Owner")]
         public async Task<IActionResult> ApproveUser(string userId)
         {
             var user = await _userManager.FindByIdAsync(userId);
@@ -260,9 +293,10 @@ namespace eventra_api.Controllers
         }
 
         // ------------------------------------------------------------------
-        // ADMIN: REJECT USER (POST /api/Auth/RejectUser/{userId})
+        // OWNER: REJECT USER (POST /api/Auth/RejectUser/{userId})
         // ------------------------------------------------------------------
         [HttpPost("RejectUser/{userId}")]
+        [Authorize(Roles = "Owner")]
         public async Task<IActionResult> RejectUser(string userId)
         {
             var user = await _userManager.FindByIdAsync(userId);
@@ -273,13 +307,93 @@ namespace eventra_api.Controllers
 
             user.IsApproved = false;
             var result = await _userManager.UpdateAsync(user);
-            
+
             if (result.Succeeded)
             {
                 return Ok(new { message = "User approval revoked." });
             }
 
             return BadRequest(new { message = "Failed to update user.", errors = result.Errors });
+        }
+
+        // ------------------------------------------------------------------
+        // GOOGLE LOGIN (POST /api/Auth/GoogleLogin)
+        // Validates a Google ID token issued by the frontend (Google Identity
+        // Services) and returns an Eventra JWT. Requires VITE_GOOGLE_CLIENT_ID
+        // on the frontend and Google:ClientId in appsettings / env vars.
+        // ------------------------------------------------------------------
+        [HttpPost("GoogleLogin")]
+        public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginDto model)
+        {
+            GoogleTokenPayload? payload;
+            try
+            {
+                using var http = new HttpClient();
+                var response = await http.GetAsync(
+                    $"https://oauth2.googleapis.com/tokeninfo?id_token={Uri.EscapeDataString(model.IdToken)}");
+
+                if (!response.IsSuccessStatusCode)
+                    return Unauthorized(new { message = "Invalid Google token." });
+
+                payload = await response.Content.ReadFromJsonAsync<GoogleTokenPayload>();
+            }
+            catch
+            {
+                return Unauthorized(new { message = "Could not validate Google token." });
+            }
+
+            if (payload == null || string.IsNullOrEmpty(payload.Email))
+                return Unauthorized(new { message = "Invalid Google token payload." });
+
+            // Verify the token was issued for our app
+            var expectedClientId = _config["Google:ClientId"];
+            if (!string.IsNullOrWhiteSpace(expectedClientId) && payload.Aud != expectedClientId)
+                return Unauthorized(new { message = "Token audience mismatch." });
+
+            var user = await _userManager.FindByEmailAsync(payload.Email);
+            if (user == null)
+            {
+                // Auto-create account linked to Google
+                user = new ApplicationUser
+                {
+                    Email = payload.Email,
+                    UserName = payload.Email.Split('@')[0],
+                    FirstName = payload.GivenName ?? payload.Name?.Split(' ')[0] ?? "User",
+                    SecondName = payload.FamilyName ?? "",
+                    EmailConfirmed = true,
+                    IsApproved = false, // Needs Owner approval like any other Manager
+                    DateRegistered = System.DateTime.UtcNow,
+                };
+                var result = await _userManager.CreateAsync(user);
+                if (!result.Succeeded)
+                    return BadRequest(new { message = "Failed to create account.", errors = result.Errors });
+
+                await _userManager.AddToRoleAsync(user, "Manager");
+            }
+
+            if (!user.IsApproved)
+                return StatusCode(403, new { message = "Your account is awaiting admin approval." });
+
+            var roles = await _userManager.GetRolesAsync(user);
+            var token = await _tokenService.CreateTokenAsync(user);
+
+            return Ok(new
+            {
+                message = "Login successful!",
+                token,
+                user = new
+                {
+                    id = user.Id,
+                    email = user.Email,
+                    firstName = user.FirstName,
+                    lastName = user.SecondName,
+                    dateRegistered = user.DateRegistered,
+                    profileImageBase64 = user.ProfileImageBase64,
+                    role = roles.FirstOrDefault() ?? "Manager",
+                    venueId = user.VenueId,
+                    tenantId = user.TenantId
+                }
+            });
         }
     }
 
@@ -301,6 +415,9 @@ namespace eventra_api.Controllers
         [Required]
         [DataType(DataType.Password)]
         public string Password { get; set; } = string.Empty;
+
+        // Multi-Tenancy support
+        public string? BusinessName { get; set; }
     }
 
     public class LoginDto
@@ -325,12 +442,28 @@ namespace eventra_api.Controllers
     {
         [Required]
         public string UserId { get; set; } = string.Empty;
-        
+
         [Required]
         public string Token { get; set; } = string.Empty;
-        
+
         [Required]
         [DataType(DataType.Password)]
         public string NewPassword { get; set; } = string.Empty;
+    }
+
+    public class GoogleLoginDto
+    {
+        [Required]
+        public string IdToken { get; set; } = string.Empty;
+    }
+
+    public class GoogleTokenPayload
+    {
+        [JsonPropertyName("sub")] public string Sub { get; set; } = string.Empty;
+        [JsonPropertyName("email")] public string Email { get; set; } = string.Empty;
+        [JsonPropertyName("name")] public string? Name { get; set; }
+        [JsonPropertyName("given_name")] public string? GivenName { get; set; }
+        [JsonPropertyName("family_name")] public string? FamilyName { get; set; }
+        [JsonPropertyName("aud")] public string Aud { get; set; } = string.Empty;
     }
 }

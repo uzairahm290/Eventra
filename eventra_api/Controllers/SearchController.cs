@@ -102,7 +102,7 @@ namespace eventra_api.Controllers
                     .Select(m => new MenuDto
                     {
                         Id = m.Id,
-                        EventId = m.EventId,
+                        VenueId = m.VenueId,
                         Name = m.Name,
                         Category = m.Category,
                         Description = m.Description,
@@ -198,6 +198,7 @@ namespace eventra_api.Controllers
                 .ToListAsync();
 
             result.Menus = await _context.Menus
+                .Include(m => m.Venue)
                 .Where(m => m.IsAvailable && (
                     EF.Functions.Like(m.Name.ToLower(), $"%{keyword}%") ||
                     EF.Functions.Like((m.Category ?? "").ToLower(), $"%{keyword}%")
@@ -205,7 +206,8 @@ namespace eventra_api.Controllers
                 .Select(m => new MenuDto
                 {
                     Id = m.Id,
-                    EventId = m.EventId,
+                    VenueId = m.VenueId,
+                    VenueName = m.Venue.Name,
                     Name = m.Name,
                     Category = m.Category,
                     Description = m.Description,

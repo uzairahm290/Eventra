@@ -228,7 +228,7 @@ namespace eventra_api.Controllers
                 }
 
                 // Check if user is the creator or admin
-                if (eventItem.CreatedBy != user.Id && !User.IsInRole("Admin"))
+                if (eventItem.CreatedBy != user.Id && !User.IsInRole("Owner") && !User.IsInRole("Manager"))
                 {
                     return Forbid();
                 }
@@ -305,7 +305,7 @@ namespace eventra_api.Controllers
                 }
 
                 // Check if user is the creator or admin
-                if (eventItem.CreatedBy != user.Id && !User.IsInRole("Admin"))
+                if (eventItem.CreatedBy != user.Id && !User.IsInRole("Owner") && !User.IsInRole("Manager"))
                 {
                     return Forbid();
                 }
@@ -353,7 +353,7 @@ namespace eventra_api.Controllers
                     return Unauthorized(new { message = "User not found." });
                 }
 
-                if (eventItem.CreatedBy != user.Id && !User.IsInRole("Admin"))
+                if (eventItem.CreatedBy != user.Id && !User.IsInRole("Owner") && !User.IsInRole("Manager"))
                 {
                     return Forbid();
                 }
@@ -373,14 +373,29 @@ namespace eventra_api.Controllers
                 return BadRequest(new { message = "No valid menus found to assign." });
             }
 
-            foreach (var menu in menus)
+            // Use EventMenu junction table to link menus to this event
+            var existingLinks = await _context.EventMenus
+                .Where(em => em.EventId == id)
+                .Select(em => em.MenuId)
+                .ToListAsync();
+
+            var newLinks = menus
+                .Where(m => !existingLinks.Contains(m.Id))
+                .Select(m => new EventMenu
+                {
+                    EventId = id,
+                    MenuId = m.Id,
+                    GuestCount = dto.GuestCount
+                })
+                .ToList();
+
+            if (newLinks.Count > 0)
             {
-                menu.EventId = id;
+                _context.EventMenus.AddRange(newLinks);
+                await _context.SaveChangesAsync();
             }
 
-            await _context.SaveChangesAsync();
-
-            return Ok(new { message = "Menus assigned to event successfully.", assignedCount = menus.Count });
+            return Ok(new { message = "Menus assigned to event successfully.", assignedCount = newLinks.Count });
         }
     }
 }

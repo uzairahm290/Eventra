@@ -3,9 +3,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using eventra_api.Data;
 using eventra_api.Models;
+using System.Security.Claims;
 
 namespace eventra_api.Controllers
 {
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class VenuesController : ControllerBase
@@ -17,16 +19,25 @@ namespace eventra_api.Controllers
             _context = context;
         }
 
+        private int? GetScopedVenueId()
+        {
+            var claim = User.FindFirstValue("VenueId");
+            return int.TryParse(claim, out var v) ? v : null;
+        }
+
         // GET: api/Venues
         [HttpGet]
         public async Task<ActionResult<IEnumerable<VenueDto>>> GetVenues([FromQuery] bool includeInactive = false)
         {
+            var scopedVenueId = GetScopedVenueId();
+
             var query = _context.Venues.AsQueryable();
 
             if (!includeInactive)
-            {
                 query = query.Where(v => v.IsActive);
-            }
+
+            if (scopedVenueId.HasValue)
+                query = query.Where(v => v.Id == scopedVenueId.Value);
 
             var venues = await query
                 .Select(v => new VenueDto
@@ -55,6 +66,10 @@ namespace eventra_api.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<VenueDto>> GetVenue(int id)
         {
+            var scopedVenueId = GetScopedVenueId();
+            if (scopedVenueId.HasValue && scopedVenueId.Value != id)
+                return Forbid();
+
             var venue = await _context.Venues
                 .Include(v => v.Events)
                 .FirstOrDefaultAsync(v => v.Id == id);
@@ -86,8 +101,8 @@ namespace eventra_api.Controllers
         }
 
         // POST: api/Venues
-        [Authorize]
         [HttpPost]
+        [Authorize(Roles = "Owner")]
         public async Task<ActionResult<VenueDto>> CreateVenue(CreateVenueDto createDto)
         {
             var venue = new Venue
@@ -132,8 +147,8 @@ namespace eventra_api.Controllers
         }
 
         // PUT: api/Venues/5
-        [Authorize]
         [HttpPut("{id}")]
+        [Authorize(Roles = "Owner")]
         public async Task<IActionResult> UpdateVenue(int id, CreateVenueDto updateDto)
         {
             var venue = await _context.Venues.FindAsync(id);
@@ -173,8 +188,8 @@ namespace eventra_api.Controllers
         }
 
         // DELETE: api/Venues/5
-        [Authorize]
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Owner")]
         public async Task<IActionResult> DeleteVenue(int id)
         {
             var venue = await _context.Venues

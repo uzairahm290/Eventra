@@ -10,6 +10,7 @@ using System;
 
 namespace eventra_api.Controllers
 {
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class ClientsController : ControllerBase
@@ -35,6 +36,7 @@ namespace eventra_api.Controllers
                     SecondName = c.SecondName,
                     Email = c.Email,
                     Phone = c.Phone,
+                    CNIC = c.CNIC,
                     Company = c.Company,
                     Address = c.Address,
                     DateRegistered = c.DateRegistered,
@@ -63,6 +65,7 @@ namespace eventra_api.Controllers
                 SecondName = client.SecondName,
                 Email = client.Email,
                 Phone = client.Phone,
+                CNIC = client.CNIC,
                 Company = client.Company,
                 Address = client.Address,
                 DateRegistered = client.DateRegistered,
@@ -74,10 +77,12 @@ namespace eventra_api.Controllers
 
         // POST: api/Clients
         [HttpPost]
+        [Authorize(Roles = "Owner,Manager")]
         public async Task<ActionResult<ClientDto>> CreateClient(CreateClientDto createDto)
         {
-            // Check if email already exists
-            if (await _context.Clients.AnyAsync(c => c.Email == createDto.Email))
+            // Check if email already exists (skip if no email provided)
+            if (!string.IsNullOrEmpty(createDto.Email) &&
+                await _context.Clients.AnyAsync(c => c.Email == createDto.Email))
             {
                 return BadRequest(new { message = "A client with this email already exists." });
             }
@@ -88,6 +93,7 @@ namespace eventra_api.Controllers
                 SecondName = createDto.SecondName,
                 Email = createDto.Email,
                 Phone = createDto.Phone,
+                CNIC = createDto.CNIC,
                 Company = createDto.Company,
                 Address = createDto.Address,
                 DateRegistered = DateTime.UtcNow,
@@ -104,6 +110,7 @@ namespace eventra_api.Controllers
                 SecondName = client.SecondName,
                 Email = client.Email,
                 Phone = client.Phone,
+                CNIC = client.CNIC,
                 Company = client.Company,
                 Address = client.Address,
                 DateRegistered = client.DateRegistered,
@@ -115,6 +122,7 @@ namespace eventra_api.Controllers
 
         // PUT: api/Clients/5
         [HttpPut("{id}")]
+        [Authorize(Roles = "Owner,Manager")]
         public async Task<IActionResult> UpdateClient(int id, UpdateClientDto updateDto)
         {
             var client = await _context.Clients.FindAsync(id);
@@ -135,6 +143,7 @@ namespace eventra_api.Controllers
             client.SecondName = updateDto.SecondName;
             client.Email = updateDto.Email;
             client.Phone = updateDto.Phone;
+            client.CNIC = updateDto.CNIC;
             client.Company = updateDto.Company;
             client.Address = updateDto.Address;
             client.IsActive = updateDto.IsActive;
@@ -146,6 +155,7 @@ namespace eventra_api.Controllers
 
         // DELETE: api/Clients/5
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Owner")]
         public async Task<IActionResult> DeleteClient(int id)
         {
             var client = await _context.Clients.FindAsync(id);
