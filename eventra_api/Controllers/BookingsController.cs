@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using eventra_api.Data;
 using eventra_api.Models;
+using eventra_api.Services;
+using System.Security.Claims;
 using System.Security.Cryptography;
 
 namespace eventra_api.Controllers
@@ -22,15 +24,32 @@ namespace eventra_api.Controllers
             _userManager = userManager;
         }
 
+        private int? GetScopedVenueId()
+        {
+            var venueIdClaim = User.FindFirstValue("VenueId");
+            return int.TryParse(venueIdClaim, out var v) ? v : null;
+        }
+
+        private bool IsOwner() => User.IsInRole("Owner");
+
         // GET: api/Bookings
-        [AllowAnonymous]
         [HttpGet]
         public async Task<ActionResult<IEnumerable<BookingDto>>> GetAllBookings()
         {
-            var bookings = await _context.Bookings
-                .Include(b => b.Event)
-                    .ThenInclude(e => e.Venue)
-                .Include(b => b.User)
+            var scopedVenueId = GetScopedVenueId();
+
+            var query = _context.Bookings
+                .Include(b => b.Event).ThenInclude(e => e.Venue)
+                .Include(b => b.Client)
+                .Include(b => b.Hall)
+                .AsQueryable();
+
+            if (scopedVenueId.HasValue)
+                query = query.Where(b => b.Hall != null
+                    ? b.Hall.VenueId == scopedVenueId.Value
+                    : b.Event.VenueId == scopedVenueId.Value);
+
+            var bookings = await query
                 .OrderByDescending(b => b.CreatedAt)
                 .Select(b => new BookingDto
                 {
@@ -38,57 +57,26 @@ namespace eventra_api.Controllers
                     EventId = b.EventId,
                     EventTitle = b.Event.Title,
                     EventDate = b.Event.Date,
-                    VenueName = b.Event.Venue != null ? b.Event.Venue.Name : null,
-                    UserId = b.UserId,
-                    UserName = b.User.UserName ?? "",
+                    MarqueName = b.Event.Venue != null ? b.Event.Venue.Name : null,
+                    ClientId = b.ClientId,
+                    ClientName = b.Client.FirstName + " " + b.Client.SecondName,
+                    ClientPhone = b.Client.Phone,
+                    ClientCNIC = b.Client.CNIC,
+                    HallId = b.HallId,
+                    HallName = b.Hall != null ? b.Hall.Name : null,
                     BookingReference = b.BookingReference,
                     BookingDate = b.BookingDate,
                     Status = b.Status.ToString(),
-                    NumberOfTickets = b.NumberOfTickets,
+                    NumberOfGuests = b.NumberOfGuests,
                     TotalAmount = b.TotalAmount,
+                    DepositAmount = b.DepositAmount,
                     AmountPaid = b.AmountPaid,
+                    PaymentMethod = b.PaymentMethod,
                     IsCheckedIn = b.IsCheckedIn,
-                    QRCode = b.QRCode,
-                    IsApprovedByAdmin = b.IsApprovedByAdmin
-                })
-                .ToListAsync();
-
-            return Ok(bookings);
-        }
-
-        // GET: api/Bookings/my-bookings
-        [HttpGet("my-bookings")]
-        public async Task<ActionResult<IEnumerable<BookingDto>>> GetMyBookings()
-        {
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null)
-            {
-                return Unauthorized(new { message = "User not found." });
-            }
-
-            var bookings = await _context.Bookings
-                .Where(b => b.UserId == user.Id)
-                .Include(b => b.Event)
-                    .ThenInclude(e => e.Venue)
-                .OrderByDescending(b => b.CreatedAt)
-                .Select(b => new BookingDto
-                {
-                    Id = b.Id,
-                    EventId = b.EventId,
-                    EventTitle = b.Event.Title,
-                    EventDate = b.Event.Date,
-                    VenueName = b.Event.Venue != null ? b.Event.Venue.Name : null,
-                    UserId = b.UserId,
-                    UserName = user.UserName ?? "",
-                    BookingReference = b.BookingReference,
-                    BookingDate = b.BookingDate,
-                    Status = b.Status.ToString(),
-                    NumberOfTickets = b.NumberOfTickets,
-                    TotalAmount = b.TotalAmount,
-                    AmountPaid = b.AmountPaid,
-                    IsCheckedIn = b.IsCheckedIn,
-                    QRCode = b.QRCode,
-                    IsApprovedByAdmin = b.IsApprovedByAdmin
+                    IsApprovedByAdmin = b.IsApprovedByAdmin,
+                    SpecialRequests = b.SpecialRequests,
+                    CancellationReason = b.CancellationReason,
+                    CreatedAt = b.CreatedAt
                 })
                 .ToListAsync();
 
@@ -96,21 +84,28 @@ namespace eventra_api.Controllers
         }
 
         // GET: api/Bookings/event/5
-        [Authorize]
         [HttpGet("event/{eventId}")]
         public async Task<ActionResult<IEnumerable<BookingDto>>> GetEventBookings(int eventId)
         {
             var eventExists = await _context.Events.AnyAsync(e => e.Id == eventId);
             if (!eventExists)
-            {
                 return NotFound(new { message = "Event not found." });
-            }
 
-            var bookings = await _context.Bookings
+            var scopedVenueId = GetScopedVenueId();
+
+            var query = _context.Bookings
                 .Where(b => b.EventId == eventId)
-                .Include(b => b.Event)
-                    .ThenInclude(e => e.Venue)
-                .Include(b => b.User)
+                .Include(b => b.Event).ThenInclude(e => e.Venue)
+                .Include(b => b.Client)
+                .Include(b => b.Hall)
+                .AsQueryable();
+
+            if (scopedVenueId.HasValue)
+                query = query.Where(b => b.Hall != null
+                    ? b.Hall.VenueId == scopedVenueId.Value
+                    : b.Event.VenueId == scopedVenueId.Value);
+
+            var bookings = await query
                 .OrderByDescending(b => b.CreatedAt)
                 .Select(b => new BookingDto
                 {
@@ -118,18 +113,23 @@ namespace eventra_api.Controllers
                     EventId = b.EventId,
                     EventTitle = b.Event.Title,
                     EventDate = b.Event.Date,
-                    VenueName = b.Event.Venue != null ? b.Event.Venue.Name : null,
-                    UserId = b.UserId,
-                    UserName = b.User.UserName ?? "",
+                    MarqueName = b.Event.Venue != null ? b.Event.Venue.Name : null,
+                    ClientId = b.ClientId,
+                    ClientName = b.Client.FirstName + " " + b.Client.SecondName,
+                    ClientPhone = b.Client.Phone,
+                    ClientCNIC = b.Client.CNIC,
+                    HallId = b.HallId,
+                    HallName = b.Hall != null ? b.Hall.Name : null,
                     BookingReference = b.BookingReference,
                     BookingDate = b.BookingDate,
                     Status = b.Status.ToString(),
-                    NumberOfTickets = b.NumberOfTickets,
+                    NumberOfGuests = b.NumberOfGuests,
                     TotalAmount = b.TotalAmount,
+                    DepositAmount = b.DepositAmount,
                     AmountPaid = b.AmountPaid,
                     IsCheckedIn = b.IsCheckedIn,
-                    QRCode = b.QRCode,
-                    IsApprovedByAdmin = b.IsApprovedByAdmin
+                    IsApprovedByAdmin = b.IsApprovedByAdmin,
+                    CreatedAt = b.CreatedAt
                 })
                 .ToListAsync();
 
@@ -140,179 +140,112 @@ namespace eventra_api.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<BookingDto>> GetBooking(int id)
         {
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null)
-            {
-                return Unauthorized(new { message = "User not found." });
-            }
-
             var booking = await _context.Bookings
-                .Include(b => b.Event)
-                    .ThenInclude(e => e.Venue)
-                .Include(b => b.User)
+                .Include(b => b.Event).ThenInclude(e => e.Venue)
+                .Include(b => b.Client)
+                .Include(b => b.Hall)
                 .FirstOrDefaultAsync(b => b.Id == id);
 
             if (booking == null)
-            {
                 return NotFound(new { message = "Booking not found." });
+
+            var scopedVenueId = GetScopedVenueId();
+            if (scopedVenueId.HasValue)
+            {
+                var bookingVenueId = booking.Hall?.VenueId ?? booking.Event.VenueId;
+                if (bookingVenueId != scopedVenueId.Value)
+                    return Forbid();
             }
 
-            // Check if user owns this booking or is admin
-            if (booking.UserId != user.Id)
-            {
-                return Forbid();
-            }
-
-            var bookingDto = new BookingDto
-            {
-                Id = booking.Id,
-                EventId = booking.EventId,
-                EventTitle = booking.Event.Title,
-                EventDate = booking.Event.Date,
-                VenueName = booking.Event.Venue?.Name,
-                UserId = booking.UserId,
-                UserName = booking.User.UserName ?? "",
-                BookingReference = booking.BookingReference,
-                BookingDate = booking.BookingDate,
-                Status = booking.Status.ToString(),
-                NumberOfTickets = booking.NumberOfTickets,
-                TotalAmount = booking.TotalAmount,
-                AmountPaid = booking.AmountPaid,
-                IsCheckedIn = booking.IsCheckedIn,
-                QRCode = booking.QRCode
-            };
-
-            return Ok(bookingDto);
+            return Ok(MapToDto(booking));
         }
 
         // POST: api/Bookings
-        [AllowAnonymous]
         [HttpPost]
+        [Authorize(Roles = "Owner,Manager")]
         public async Task<ActionResult<BookingDto>> CreateBooking(CreateBookingDto createDto)
         {
-            // For development: use first user if not authenticated
-            var user = User.Identity?.IsAuthenticated == true 
-                ? await _userManager.GetUserAsync(User) 
-                : await _userManager.Users.FirstOrDefaultAsync();
-            
-            if (user == null)
+            var client = await _context.Clients.FindAsync(createDto.ClientId);
+            if (client == null)
+                return NotFound(new { message = "Client not found." });
+
+            var eventItem = await _context.Events.Include(e => e.Venue).FirstOrDefaultAsync(e => e.Id == createDto.EventId);
+            if (eventItem == null)
+                return NotFound(new { message = "Event not found." });
+
+            var scopedVenueId = GetScopedVenueId();
+            if (scopedVenueId.HasValue)
             {
-                return Unauthorized(new { message = "User not found." });
+                var venueId = createDto.HallId.HasValue
+                    ? (await _context.Halls.FindAsync(createDto.HallId.Value))?.VenueId
+                    : eventItem.VenueId;
+
+                if (venueId != scopedVenueId.Value)
+                    return Forbid();
             }
 
-            var eventItem = await _context.Events.FindAsync(createDto.EventId);
-            if (eventItem == null)
+            if (createDto.HallId.HasValue)
             {
-                return NotFound(new { message = "Event not found." });
+                var hall = await _context.Halls.FindAsync(createDto.HallId.Value);
+                if (hall == null)
+                    return NotFound(new { message = "Hall not found." });
             }
 
             // Check capacity
-            if (eventItem.CurrentAttendees + createDto.NumberOfTickets > eventItem.MaxAttendees)
-            {
-                return BadRequest(new { message = "Not enough seats available." });
-            }
+            if (eventItem.CurrentAttendees + createDto.NumberOfGuests > eventItem.MaxAttendees)
+                return BadRequest(new { message = "Not enough capacity available." });
 
-            // Check if already booked
-            var existingBooking = await _context.Bookings
-                .FirstOrDefaultAsync(b => b.EventId == createDto.EventId && b.UserId == user.Id && b.Status != BookingStatus.Cancelled);
-
-            if (existingBooking != null)
-            {
-                return BadRequest(new { message = "You already have an active booking for this event." });
-            }
-
-            var totalAmount = (eventItem.TicketPrice ?? 0) * createDto.NumberOfTickets;
             var bookingReference = GenerateBookingReference();
+            var currentUser = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
             var booking = new Booking
             {
                 EventId = createDto.EventId,
-                UserId = user.Id,
+                ClientId = createDto.ClientId,
+                HallId = createDto.HallId,
                 BookingReference = bookingReference,
                 BookingDate = DateTime.UtcNow,
-                Status = eventItem.IsFree ? BookingStatus.Confirmed : BookingStatus.Pending,
-                NumberOfTickets = createDto.NumberOfTickets,
-                TotalAmount = totalAmount,
-                AmountPaid = eventItem.IsFree ? totalAmount : 0,
-                PaymentDate = eventItem.IsFree ? DateTime.UtcNow : null,
+                Status = BookingStatus.Pending,
+                NumberOfGuests = createDto.NumberOfGuests,
+                TotalAmount = createDto.TotalAmount,
+                DepositAmount = createDto.DepositAmount,
+                AmountPaid = 0,
+                PaymentMethod = createDto.PaymentMethod,
                 SpecialRequests = createDto.SpecialRequests,
-                QRCode = GenerateQRCode(bookingReference),
+                CreatedByUserId = currentUser,
                 CreatedAt = DateTime.UtcNow
             };
 
             _context.Bookings.Add(booking);
-
-            // Update event attendee count
-            eventItem.CurrentAttendees += createDto.NumberOfTickets;
-
+            eventItem.CurrentAttendees += createDto.NumberOfGuests;
             await _context.SaveChangesAsync();
 
-            // Reload event with venue to include venue name
-            var eventWithVenue = await _context.Events
-                .Include(e => e.Venue)
-                .FirstOrDefaultAsync(e => e.Id == booking.EventId);
+            var created = await _context.Bookings
+                .Include(b => b.Event).ThenInclude(e => e.Venue)
+                .Include(b => b.Client)
+                .Include(b => b.Hall)
+                .FirstOrDefaultAsync(b => b.Id == booking.Id);
 
-            var bookingDto = new BookingDto
-            {
-                Id = booking.Id,
-                EventId = booking.EventId,
-                EventTitle = eventItem.Title,
-                EventDate = eventItem.Date,
-                VenueName = eventWithVenue?.Venue?.Name,
-                UserId = booking.UserId,
-                UserName = user.UserName ?? "",
-                BookingReference = booking.BookingReference,
-                BookingDate = booking.BookingDate,
-                Status = booking.Status.ToString(),
-                NumberOfTickets = booking.NumberOfTickets,
-                TotalAmount = booking.TotalAmount,
-                AmountPaid = booking.AmountPaid,
-                IsCheckedIn = booking.IsCheckedIn,
-                QRCode = booking.QRCode
-            };
-
-            return CreatedAtAction(nameof(GetBooking), new { id = booking.Id }, bookingDto);
+            return CreatedAtAction(nameof(GetBooking), new { id = booking.Id }, MapToDto(created!));
         }
 
         // POST: api/Bookings/5/payment
         [HttpPost("{id}/payment")]
+        [Authorize(Roles = "Owner,Manager")]
         public async Task<IActionResult> ProcessPayment(int id, ProcessPaymentDto paymentDto)
         {
             if (id != paymentDto.BookingId)
-            {
                 return BadRequest(new { message = "Booking ID mismatch." });
-            }
 
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null)
-            {
-                return Unauthorized(new { message = "User not found." });
-            }
-
-            var booking = await _context.Bookings
-                .Include(b => b.Event)
-                .FirstOrDefaultAsync(b => b.Id == id);
-
+            var booking = await _context.Bookings.Include(b => b.Event).FirstOrDefaultAsync(b => b.Id == id);
             if (booking == null)
-            {
                 return NotFound(new { message = "Booking not found." });
-            }
-
-            // Check if user owns this booking
-            if (booking.UserId != user.Id)
-            {
-                return Forbid();
-            }
 
             if (booking.Status == BookingStatus.Cancelled)
-            {
                 return BadRequest(new { message = "Cannot process payment for cancelled booking." });
-            }
 
             if (booking.AmountPaid + paymentDto.Amount > booking.TotalAmount)
-            {
                 return BadRequest(new { message = "Payment amount exceeds balance due." });
-            }
 
             booking.AmountPaid += paymentDto.Amount;
             booking.PaymentMethod = paymentDto.PaymentMethod;
@@ -321,15 +254,13 @@ namespace eventra_api.Controllers
             booking.UpdatedAt = DateTime.UtcNow;
 
             if (booking.AmountPaid >= booking.TotalAmount)
-            {
                 booking.Status = BookingStatus.Confirmed;
-            }
 
             await _context.SaveChangesAsync();
 
-            return Ok(new 
-            { 
-                message = "Payment processed successfully.", 
+            return Ok(new
+            {
+                message = "Payment processed successfully.",
                 amountPaid = booking.AmountPaid,
                 remainingBalance = booking.TotalAmount - booking.AmountPaid,
                 status = booking.Status.ToString()
@@ -337,140 +268,125 @@ namespace eventra_api.Controllers
         }
 
         // POST: api/Bookings/5/checkin
-        [Authorize]
         [HttpPost("{id}/checkin")]
+        [Authorize(Roles = "Owner,Manager")]
         public async Task<IActionResult> CheckInBooking(int id)
         {
             var booking = await _context.Bookings.FindAsync(id);
             if (booking == null)
-            {
                 return NotFound(new { message = "Booking not found." });
-            }
 
             if (booking.Status != BookingStatus.Confirmed)
-            {
                 return BadRequest(new { message = "Only confirmed bookings can be checked in." });
-            }
 
             if (booking.IsCheckedIn)
-            {
                 return BadRequest(new { message = "Booking already checked in." });
-            }
 
             booking.IsCheckedIn = true;
             booking.CheckInTime = DateTime.UtcNow;
             booking.UpdatedAt = DateTime.UtcNow;
-
             await _context.SaveChangesAsync();
 
             return Ok(new { message = "Check-in successful.", checkInTime = booking.CheckInTime });
         }
 
         // DELETE: api/Bookings/5
-        [AllowAnonymous]
         [HttpDelete("{id}")]
-        public async Task<IActionResult> CancelBooking(int id)
+        [Authorize(Roles = "Owner,Manager")]
+        public async Task<IActionResult> CancelBooking(int id, [FromBody] CancelBookingDto? cancelDto = null)
         {
             var booking = await _context.Bookings
                 .Include(b => b.Event)
                 .FirstOrDefaultAsync(b => b.Id == id);
 
             if (booking == null)
-            {
                 return NotFound(new { message = "Booking not found." });
-            }
-
-            // For development: Skip auth checks when not authenticated
-            if (User.Identity?.IsAuthenticated == true)
-            {
-                var user = await _userManager.GetUserAsync(User);
-                if (user == null)
-                {
-                    return Unauthorized(new { message = "User not found." });
-                }
-
-                // Check if user owns this booking or is admin
-                if (booking.UserId != user.Id)
-                {
-                    return Forbid();
-                }
-            }
 
             if (booking.Status == BookingStatus.Cancelled)
-            {
                 return BadRequest(new { message = "Booking already cancelled." });
-            }
-
-            if (booking.IsCheckedIn)
-            {
-                return BadRequest(new { message = "Cannot cancel after check-in." });
-            }
 
             booking.Status = BookingStatus.Cancelled;
             booking.CancellationDate = DateTime.UtcNow;
+            booking.CancellationReason = cancelDto?.Reason;
             booking.UpdatedAt = DateTime.UtcNow;
 
-            // Update event attendee count
-            if (booking.Event.CurrentAttendees >= booking.NumberOfTickets)
-            {
-                booking.Event.CurrentAttendees -= booking.NumberOfTickets;
-            }
+            if (booking.Event.CurrentAttendees >= booking.NumberOfGuests)
+                booking.Event.CurrentAttendees -= booking.NumberOfGuests;
 
             await _context.SaveChangesAsync();
-
             return Ok(new { message = "Booking cancelled successfully." });
         }
 
         // POST: api/Bookings/5/approve
         [HttpPost("{id}/approve")]
+        [Authorize(Roles = "Owner,Manager")]
         public async Task<IActionResult> ApproveBooking(int id)
         {
             var booking = await _context.Bookings.FindAsync(id);
             if (booking == null)
-            {
                 return NotFound(new { message = "Booking not found." });
-            }
-
-            if (booking.Status == BookingStatus.Cancelled)
-            {
-                return BadRequest(new { message = "Cannot approve a cancelled booking." });
-            }
 
             booking.IsApprovedByAdmin = true;
+            booking.Status = BookingStatus.Confirmed;
             booking.UpdatedAt = DateTime.UtcNow;
-
             await _context.SaveChangesAsync();
 
-            return Ok(new { message = "Booking approved successfully." });
+            return Ok(new { message = "Booking approved." });
         }
 
         // POST: api/Bookings/5/reject
         [HttpPost("{id}/reject")]
-        public async Task<IActionResult> RejectBooking(int id)
+        [Authorize(Roles = "Owner,Manager")]
+        public async Task<IActionResult> RejectBooking(int id, [FromBody] CancelBookingDto? rejectDto = null)
         {
             var booking = await _context.Bookings.FindAsync(id);
             if (booking == null)
-            {
                 return NotFound(new { message = "Booking not found." });
-            }
 
             booking.IsApprovedByAdmin = false;
+            booking.Status = BookingStatus.Cancelled;
+            booking.CancellationReason = rejectDto?.Reason ?? "Rejected by Owner/Manager";
+            booking.CancellationDate = DateTime.UtcNow;
             booking.UpdatedAt = DateTime.UtcNow;
-
             await _context.SaveChangesAsync();
 
-            return Ok(new { message = "Booking approval revoked." });
+            return Ok(new { message = "Booking rejected." });
         }
 
-        private string GenerateBookingReference()
+        private static BookingDto MapToDto(Booking b) => new BookingDto
         {
-            return $"BK{DateTime.UtcNow:yyyyMMdd}{RandomNumberGenerator.GetInt32(10000, 99999)}";
-        }
+            Id = b.Id,
+            EventId = b.EventId,
+            EventTitle = b.Event.Title,
+            EventDate = b.Event.Date,
+            MarqueName = b.Event.Venue?.Name,
+            ClientId = b.ClientId,
+            ClientName = b.Client.FirstName + " " + b.Client.SecondName,
+            ClientPhone = b.Client.Phone,
+            ClientCNIC = b.Client.CNIC,
+            HallId = b.HallId,
+            HallName = b.Hall?.Name,
+            BookingReference = b.BookingReference,
+            BookingDate = b.BookingDate,
+            Status = b.Status.ToString(),
+            NumberOfGuests = b.NumberOfGuests,
+            TotalAmount = b.TotalAmount,
+            DepositAmount = b.DepositAmount,
+            AmountPaid = b.AmountPaid,
+            PaymentMethod = b.PaymentMethod,
+            IsCheckedIn = b.IsCheckedIn,
+            IsApprovedByAdmin = b.IsApprovedByAdmin,
+            SpecialRequests = b.SpecialRequests,
+            CancellationReason = b.CancellationReason,
+            CreatedAt = b.CreatedAt
+        };
 
-        private string GenerateQRCode(string bookingReference)
-        {
-            // In production, integrate with actual QR code generation library
-            return Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(bookingReference));
-        }
+        private static string GenerateBookingReference()
+            => $"BK{DateTime.UtcNow:yyyyMMdd}{RandomNumberGenerator.GetInt32(10000, 99999)}";
+    }
+
+    public class CancelBookingDto
+    {
+        public string? Reason { get; set; }
     }
 }

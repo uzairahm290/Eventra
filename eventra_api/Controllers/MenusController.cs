@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using eventra_api.Data;
 using eventra_api.Models;
+using System.Security.Claims;
 
 namespace eventra_api.Controllers
 {
@@ -18,17 +19,32 @@ namespace eventra_api.Controllers
             _context = context;
         }
 
-        // GET: api/Menus - Get all menus in catalog
-        [AllowAnonymous]
+        private int? GetScopedVenueId()
+        {
+            var claim = User.FindFirstValue("VenueId");
+            return int.TryParse(claim, out var v) ? v : null;
+        }
+
+        // GET: api/Menus
         [HttpGet]
         public async Task<ActionResult<IEnumerable<MenuDto>>> GetAllMenus()
         {
-            var menus = await _context.Menus
-                .Where(m => m.IsAvailable)
+            var scopedVenueId = GetScopedVenueId();
+
+            var query = _context.Menus
+                .Include(m => m.Venue)
+                .AsQueryable();
+
+            if (scopedVenueId.HasValue)
+                query = query.Where(m => m.VenueId == scopedVenueId.Value);
+
+            var menus = await query
+                .OrderBy(m => m.Name)
                 .Select(m => new MenuDto
                 {
                     Id = m.Id,
-                    EventId = m.EventId,
+                    VenueId = m.VenueId,
+                    VenueName = m.Venue.Name,
                     Name = m.Name,
                     Category = m.Category,
                     Description = m.Description,
@@ -45,25 +61,23 @@ namespace eventra_api.Controllers
             return Ok(menus);
         }
 
-        // GET: api/Menus/event/5
-        [AllowAnonymous]
-        [HttpGet("event/{eventId}")]
-        public async Task<ActionResult<IEnumerable<MenuDto>>> GetEventMenus(int eventId)
+        // GET: api/Menus/venue/5
+        [HttpGet("venue/{venueId}")]
+        public async Task<ActionResult<IEnumerable<MenuDto>>> GetVenueMenus(int venueId)
         {
-            // Return empty array if event doesn't exist instead of 404
-            var eventExists = await _context.Events.AnyAsync(e => e.Id == eventId);
-            if (!eventExists)
-            {
-                return Ok(new List<MenuDto>());
-            }
+            var scopedVenueId = GetScopedVenueId();
+            if (scopedVenueId.HasValue && scopedVenueId.Value != venueId)
+                return Forbid();
 
-            // Return only menus assigned to this specific event
             var menus = await _context.Menus
-                .Where(m => m.EventId == eventId && m.IsAvailable)
+                .Include(m => m.Venue)
+                .Where(m => m.VenueId == venueId)
+                .OrderBy(m => m.Name)
                 .Select(m => new MenuDto
                 {
                     Id = m.Id,
-                    EventId = m.EventId,
+                    VenueId = m.VenueId,
+                    VenueName = m.Venue.Name,
                     Name = m.Name,
                     Category = m.Category,
                     Description = m.Description,
@@ -74,6 +88,38 @@ namespace eventra_api.Controllers
                     IsGlutenFree = m.IsGlutenFree,
                     AllergenInfo = m.AllergenInfo,
                     IsAvailable = m.IsAvailable
+                })
+                .ToListAsync();
+
+            return Ok(menus);
+        }
+
+        // GET: api/Menus/event/5 — menus assigned to a specific event via EventMenu junction
+        [HttpGet("event/{eventId}")]
+        public async Task<ActionResult<IEnumerable<MenuDto>>> GetEventMenus(int eventId)
+        {
+            var eventExists = await _context.Events.AnyAsync(e => e.Id == eventId);
+            if (!eventExists)
+                return Ok(new List<MenuDto>());
+
+            var menus = await _context.EventMenus
+                .Where(em => em.EventId == eventId)
+                .Include(em => em.Menu).ThenInclude(m => m.Venue)
+                .Select(em => new MenuDto
+                {
+                    Id = em.Menu.Id,
+                    VenueId = em.Menu.VenueId,
+                    VenueName = em.Menu.Venue.Name,
+                    Name = em.Menu.Name,
+                    Category = em.Menu.Category,
+                    Description = em.Menu.Description,
+                    PricePerPerson = em.Menu.PricePerPerson,
+                    MinimumGuests = em.Menu.MinimumGuests,
+                    IsVegetarian = em.Menu.IsVegetarian,
+                    IsVegan = em.Menu.IsVegan,
+                    IsGlutenFree = em.Menu.IsGlutenFree,
+                    AllergenInfo = em.Menu.AllergenInfo,
+                    IsAvailable = em.Menu.IsAvailable
                 })
                 .ToListAsync();
 
@@ -81,21 +127,18 @@ namespace eventra_api.Controllers
         }
 
         // GET: api/Menus/5
-        [AllowAnonymous]
         [HttpGet("{id}")]
         public async Task<ActionResult<MenuDto>> GetMenu(int id)
         {
-            var menu = await _context.Menus.FindAsync(id);
-
+            var menu = await _context.Menus.Include(m => m.Venue).FirstOrDefaultAsync(m => m.Id == id);
             if (menu == null)
-            {
                 return NotFound(new { message = "Menu not found." });
-            }
 
-            var menuDto = new MenuDto
+            return Ok(new MenuDto
             {
                 Id = menu.Id,
-                EventId = menu.EventId,
+                VenueId = menu.VenueId,
+                VenueName = menu.Venue.Name,
                 Name = menu.Name,
                 Category = menu.Category,
                 Description = menu.Description,
@@ -106,29 +149,25 @@ namespace eventra_api.Controllers
                 IsGlutenFree = menu.IsGlutenFree,
                 AllergenInfo = menu.AllergenInfo,
                 IsAvailable = menu.IsAvailable
-            };
-
-            return Ok(menuDto);
+            });
         }
 
         // POST: api/Menus
-        [AllowAnonymous]
         [HttpPost]
+        [Authorize(Roles = "Owner,Manager")]
         public async Task<ActionResult<MenuDto>> CreateMenu(CreateMenuDto createDto)
         {
-            // Validate event exists if EventId is provided
-            if (createDto.EventId.HasValue)
-            {
-                var eventExists = await _context.Events.AnyAsync(e => e.Id == createDto.EventId.Value);
-                if (!eventExists)
-                {
-                    return NotFound(new { message = "Event not found." });
-                }
-            }
+            var scopedVenueId = GetScopedVenueId();
+            if (scopedVenueId.HasValue && scopedVenueId.Value != createDto.VenueId)
+                return Forbid();
+
+            var venue = await _context.Venues.FindAsync(createDto.VenueId);
+            if (venue == null)
+                return NotFound(new { message = "Venue (Marque) not found." });
 
             var menu = new Menu
             {
-                EventId = createDto.EventId,
+                VenueId = createDto.VenueId,
                 Name = createDto.Name,
                 Category = createDto.Category,
                 Description = createDto.Description,
@@ -145,10 +184,11 @@ namespace eventra_api.Controllers
             _context.Menus.Add(menu);
             await _context.SaveChangesAsync();
 
-            var menuDto = new MenuDto
+            return CreatedAtAction(nameof(GetMenu), new { id = menu.Id }, new MenuDto
             {
                 Id = menu.Id,
-                EventId = menu.EventId,
+                VenueId = menu.VenueId,
+                VenueName = venue.Name,
                 Name = menu.Name,
                 Category = menu.Category,
                 Description = menu.Description,
@@ -159,22 +199,21 @@ namespace eventra_api.Controllers
                 IsGlutenFree = menu.IsGlutenFree,
                 AllergenInfo = menu.AllergenInfo,
                 IsAvailable = menu.IsAvailable
-            };
-
-            return CreatedAtAction(nameof(GetMenu), new { id = menu.Id }, menuDto);
+            });
         }
 
         // PUT: api/Menus/5
-        [AllowAnonymous]
         [HttpPut("{id}")]
+        [Authorize(Roles = "Owner,Manager")]
         public async Task<IActionResult> UpdateMenu(int id, CreateMenuDto updateDto)
         {
             var menu = await _context.Menus.FindAsync(id);
-
             if (menu == null)
-            {
                 return NotFound(new { message = "Menu not found." });
-            }
+
+            var scopedVenueId = GetScopedVenueId();
+            if (scopedVenueId.HasValue && menu.VenueId != scopedVenueId.Value)
+                return Forbid();
 
             menu.Name = updateDto.Name;
             menu.Category = updateDto.Category;
@@ -186,59 +225,44 @@ namespace eventra_api.Controllers
             menu.IsGlutenFree = updateDto.IsGlutenFree;
             menu.AllergenInfo = updateDto.AllergenInfo;
 
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!await MenuExists(id))
-                {
-                    return NotFound(new { message = "Menu not found." });
-                }
-                throw;
-            }
-
+            await _context.SaveChangesAsync();
             return NoContent();
         }
 
         // DELETE: api/Menus/5
-        [AllowAnonymous]
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Owner,Manager")]
         public async Task<IActionResult> DeleteMenu(int id)
         {
             var menu = await _context.Menus.FindAsync(id);
             if (menu == null)
-            {
                 return NotFound(new { message = "Menu not found." });
-            }
+
+            var scopedVenueId = GetScopedVenueId();
+            if (scopedVenueId.HasValue && menu.VenueId != scopedVenueId.Value)
+                return Forbid();
 
             _context.Menus.Remove(menu);
             await _context.SaveChangesAsync();
-
             return NoContent();
         }
 
         // PATCH: api/Menus/5/availability
-        [AllowAnonymous]
         [HttpPatch("{id}/availability")]
+        [Authorize(Roles = "Owner,Manager")]
         public async Task<IActionResult> ToggleAvailability(int id, [FromBody] bool isAvailable)
         {
             var menu = await _context.Menus.FindAsync(id);
             if (menu == null)
-            {
                 return NotFound(new { message = "Menu not found." });
-            }
+
+            var scopedVenueId = GetScopedVenueId();
+            if (scopedVenueId.HasValue && menu.VenueId != scopedVenueId.Value)
+                return Forbid();
 
             menu.IsAvailable = isAvailable;
             await _context.SaveChangesAsync();
-
             return Ok(new { message = $"Menu {(isAvailable ? "enabled" : "disabled")} successfully." });
-        }
-
-        private async Task<bool> MenuExists(int id)
-        {
-            return await _context.Menus.AnyAsync(e => e.Id == id);
         }
     }
 }
