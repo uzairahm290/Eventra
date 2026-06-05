@@ -9,6 +9,9 @@ interface User {
   lastName: string;
   profileImageBase64?: string;
   role?: string;
+  venueId?: number;
+  venueName?: string;
+  tenantId?: number;
 }
 
 interface AuthContextType {
@@ -75,6 +78,9 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
         lastName: response.user.lastName,
         profileImageBase64: response.user.profileImageBase64,
         role: response.user.role,
+        venueId: response.user.venueId,
+        venueName: response.user.venueName,
+        tenantId: response.user.tenantId,
       };
 
       setUser(userData);
@@ -121,6 +127,9 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
         lastName: response.user.lastName,
         profileImageBase64: response.user.profileImageBase64,
         role: response.user.role,
+        venueId: response.user.venueId,
+        venueName: response.user.venueName,
+        tenantId: response.user.tenantId,
       };
 
       setUser(user);

@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FiMail, FiLock, FiUser, FiEye, FiEyeOff } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import { useAuth } from '../context/AuthContext';
 import Modal from '../components/Modal';
+
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
 
 const Register: React.FC = () => {
   const navigate = useNavigate();
@@ -19,6 +21,47 @@ const Register: React.FC = () => {
   });
   const [error, setError] = useState('');
   const [termsOpen, setTermsOpen] = useState(false);
+  const [googleLoaded, setGoogleLoaded] = useState(false);
+  const googleBtnRef = useRef<HTMLDivElement>(null);
+
+  // Load Google Identity Services when VITE_GOOGLE_CLIENT_ID is configured
+  useEffect(() => {
+    if (!GOOGLE_CLIENT_ID) return;
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.onload = () => setGoogleLoaded(true);
+    document.head.appendChild(script);
+    return () => { if (document.head.contains(script)) document.head.removeChild(script); };
+  }, []);
+
+  useEffect(() => {
+    if (!googleLoaded || !googleBtnRef.current || !GOOGLE_CLIENT_ID) return;
+    const g = (window as unknown as Record<string, unknown>).google as {
+      accounts: { id: { initialize: (o: unknown) => void; renderButton: (el: HTMLElement, o: unknown) => void } };
+    } | undefined;
+    if (!g) return;
+    g.accounts.id.initialize({
+      client_id: GOOGLE_CLIENT_ID,
+      callback: async (resp: { credential: string }) => {
+        try {
+          const res = await fetch('/api/Auth/GoogleLogin', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ idToken: resp.credential }),
+          });
+          const data = await res.json() as { message: string; token?: string };
+          if (!res.ok) throw new Error(data.message);
+          localStorage.setItem('token', data.token!);
+          toast.success('Account created with Google!');
+          window.location.href = '/dashboard';
+        } catch (err) {
+          toast.error(err instanceof Error ? err.message : 'Google sign-up failed');
+        }
+      },
+    });
+    g.accounts.id.renderButton(googleBtnRef.current, { theme: 'outline', size: 'large', text: 'signup_with', width: googleBtnRef.current.clientWidth });
+  }, [googleLoaded]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -291,8 +334,23 @@ const Register: React.FC = () => {
               )}
             </button>
 
+            {/* Google Sign-Up (only renders when VITE_GOOGLE_CLIENT_ID is set) */}
+            {GOOGLE_CLIENT_ID && (
+              <>
+                <div className="relative my-2">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-gray-200" />
+                  </div>
+                  <div className="relative flex justify-center text-sm">
+                    <span className="px-2 bg-white text-gray-400">or</span>
+                  </div>
+                </div>
+                <div ref={googleBtnRef} className="w-full min-h-[44px]" />
+              </>
+            )}
+
             {/* Divider */}
-            <div className="relative my-6">
+            <div className="relative my-4">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-gray-300"></div>
               </div>
