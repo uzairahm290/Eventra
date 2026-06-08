@@ -1,8 +1,8 @@
-const API_BASE_URL = '/api'; // Uses Vite proxy configured in vite.config.ts
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) || '/api';
 
 // Security: Rate limiting configuration
-const RATE_LIMIT_WINDOW = 60000; // 1 minute
-const MAX_REQUESTS_PER_WINDOW = 100;
+// const RATE_LIMIT_WINDOW = 60000; // 1 minute
+// const MAX_REQUESTS_PER_WINDOW = 100;
 
 export interface LoginRequest {
   email: string;
@@ -27,6 +27,9 @@ export interface AuthResponse {
     dateRegistered: string;
     profileImageBase64?: string;
     role?: string;
+    venueId?: number;
+    venueName?: string;
+    tenantId?: number;
   };
 }
 

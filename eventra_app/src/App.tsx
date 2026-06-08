@@ -25,6 +25,8 @@ import CreateEvent from './pages/CreateEvent';
 import Help from './pages/Help';
 import AdminApproval from './pages/AdminApproval';
 import Workers from './pages/Workers';
+import Halls from './pages/Halls';
+import Attendance from './pages/Attendance';
 import Landing from './pages/Landing';
 import './App.css';
 
@@ -48,7 +50,7 @@ const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     return <Navigate to="/login" replace />;
   }
   
-  if (user?.role !== 'Admin') {
+  if (user?.role !== 'Owner') {
     return <Navigate to="/dashboard" replace />;
   }
   
@@ -115,14 +117,12 @@ function AppRoutes() {
         <Route path="profile" element={<Profile />} />
         <Route path="settings" element={<Settings />} />
         <Route path="help" element={<Help />} />
+        <Route path="halls" element={<Halls />} />
+        <Route path="workers" element={<Workers />} />
+        <Route path="attendance" element={<Attendance />} />
         <Route path="admin/approvals" element={
           <AdminRoute>
             <AdminApproval />
-          </AdminRoute>
-        } />
-        <Route path="admin/workers" element={
-          <AdminRoute>
-            <Workers />
           </AdminRoute>
         } />
       </Route>

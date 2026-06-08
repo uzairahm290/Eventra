@@ -4,7 +4,8 @@ import { motion } from 'framer-motion';
 import {
   FiHome, FiCalendar, FiMapPin, FiUsers, FiBookOpen,
   FiMenu, FiX, FiBell, FiUser, FiLogOut, FiSettings,
-  FiSearch, FiBarChart2, FiHelpCircle, FiCoffee
+  FiSearch, FiBarChart2, FiHelpCircle, FiCoffee, FiGrid,
+  FiCheckSquare, FiUserCheck
 } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
 
@@ -55,20 +56,22 @@ const DashboardLayout: React.FC = () => {
   const allNavigation: NavigationItem[] = [
     { name: 'Dashboard', href: '/dashboard', icon: FiHome },
     { name: 'Events', href: '/dashboard/events', icon: FiCalendar },
-    { name: 'Venues', href: '/dashboard/venues', icon: FiMapPin },
+    { name: 'Marques', href: '/dashboard/venues', icon: FiMapPin },
+    { name: 'Halls', href: '/dashboard/halls', icon: FiGrid },
     { name: 'Clients', href: '/dashboard/clients', icon: FiUsers },
-    { name: 'Menus', href: '/dashboard/menus', icon: FiCoffee },
     { name: 'Bookings', href: '/dashboard/bookings', icon: FiBookOpen },
+    { name: 'Menus', href: '/dashboard/menus', icon: FiCoffee },
+    { name: 'Workers', href: '/dashboard/workers', icon: FiUser },
+    { name: 'Attendance', href: '/dashboard/attendance', icon: FiCheckSquare },
     { name: 'Calendar', href: '/dashboard/calendar', icon: FiCalendar },
     { name: 'Reports', href: '/dashboard/reports', icon: FiBarChart2 },
-    { name: 'Admin Approvals', href: '/dashboard/admin/approvals', icon: FiUsers, adminOnly: true },
-    { name: 'Venue Workers', href: '/dashboard/admin/workers', icon: FiUsers, adminOnly: true },
+    { name: 'Manager Approvals', href: '/dashboard/admin/approvals', icon: FiUserCheck, adminOnly: true },
     { name: 'Help', href: '/dashboard/help', icon: FiHelpCircle },
   ];
 
   // Filter navigation based on user role
-  const navigation = allNavigation.filter(item => 
-    !item.adminOnly || user?.role === 'Admin'
+  const navigation = allNavigation.filter(item =>
+    !item.adminOnly || user?.role === 'Owner'
   );
 
   const handleLogout = () => {
@@ -161,7 +164,13 @@ const DashboardLayout: React.FC = () => {
               <p className="text-sm font-medium text-gray-900 truncate">
                 {user?.firstName} {user?.lastName}
               </p>
-              <p className="text-xs text-gray-500 truncate">{user?.email}</p>
+              <p className="text-xs text-gray-500 truncate">
+                {user?.role === 'Manager' && user?.venueName
+                  ? user.venueName
+                  : user?.role === 'Owner'
+                  ? 'Owner'
+                  : user?.email}
+              </p>
             </div>
           </div>
         </div>
