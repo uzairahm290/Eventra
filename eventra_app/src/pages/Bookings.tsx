@@ -1,624 +1,990 @@
-import React, { useState, useEffect } from 'react';
-import { FiPlus, FiSearch, FiCalendar, FiMapPin, FiUser, FiEdit, FiTrash2, FiEye, FiCheckCircle, FiCheck, FiX } from 'react-icons/fi';
+import React, { useEffect, useState } from 'react';
+import {
+  FiPlus, FiSearch, FiUser, FiCalendar, FiCheck, FiX,
+  FiEye, FiDollarSign, FiPhone, FiMapPin, FiUsers,
+} from 'react-icons/fi';
 import { toast } from 'react-toastify';
-import Modal from '../components/Modal';
-import { bookingService } from '../services/bookingService';
-import type { Booking } from '../services/bookingService';
+import { useAuth } from '../context/AuthContext';
+
+interface Booking {
+  id: number;
+  bookingReference: string;
+  bookingDate: string;
+  status: string;
+  clientId: number;
+  clientName: string;
+  clientPhone?: string;
+  clientCNIC?: string;
+  hallId?: number;
+  hallName?: string;
+  marqueName?: string;
+  eventId: number;
+  eventTitle: string;
+  eventDate: string;
+  numberOfGuests: number;
+  totalAmount: number;
+  depositAmount: number;
+  amountPaid: number;
+  paymentMethod?: string;
+  isCheckedIn: boolean;
+  isApprovedByAdmin: boolean;
+  specialRequests?: string;
+  cancellationReason?: string;
+  createdAt: string;
+}
+
+interface Client {
+  id: number;
+  firstName: string;
+  secondName: string;
+  phone?: string;
+  email?: string;
+  cNIC?: string;
+}
+
+interface Hall {
+  id: number;
+  venueId: number;
+  venueName: string;
+  name: string;
+  capacity: number;
+}
+
+interface Venue {
+  id: number;
+  name: string;
+}
+
+interface EventItem {
+  id: number;
+  title: string;
+  date: string;
+  venueId?: number;
+}
+
+interface BookingFormData {
+  clientId: number;
+  clientSearch: string;
+  newClientMode: boolean;
+  newClientFirstName: string;
+  newClientLastName: string;
+  newClientPhone: string;
+  newClientEmail: string;
+  newClientCNIC: string;
+  venueId: number;
+  hallId: number;
+  eventId: number;
+  numberOfGuests: string;
+  totalAmount: string;
+  depositAmount: string;
+  paymentMethod: string;
+  specialRequests: string;
+}
+
+const PAYMENT_METHODS = ['Cash', 'Bank Transfer', 'Cheque', 'JazzCash', 'EasyPaisa', 'Online Transfer', 'Other'];
+
+const STATUS_COLORS: Record<string, string> = {
+  Pending: 'bg-yellow-100 text-yellow-800',
+  Confirmed: 'bg-green-100 text-green-800',
+  Cancelled: 'bg-red-100 text-red-800',
+  CheckedIn: 'bg-blue-100 text-blue-800',
+};
+
+const PAYMENT_BADGE: Record<string, string> = {
+  Paid: 'bg-emerald-100 text-emerald-800',
+  Partial: 'bg-orange-100 text-orange-800',
+  Unpaid: 'bg-red-100 text-red-800',
+};
+
+const getPaymentStatus = (b: Booking) => {
+  if (b.totalAmount > 0 && b.amountPaid >= b.totalAmount) return 'Paid';
+  if (b.amountPaid > 0) return 'Partial';
+  return 'Unpaid';
+};
+
+const fmt = (n: number) => `₨${n.toLocaleString('en-PK')}`;
+
+const makeDefaultForm = (venueId?: number): BookingFormData => ({
+  clientId: 0,
+  clientSearch: '',
+  newClientMode: false,
+  newClientFirstName: '',
+  newClientLastName: '',
+  newClientPhone: '',
+  newClientEmail: '',
+  newClientCNIC: '',
+  venueId: venueId ?? 0,
+  hallId: 0,
+  eventId: 0,
+  numberOfGuests: '1',
+  totalAmount: '',
+  depositAmount: '',
+  paymentMethod: 'Cash',
+  specialRequests: '',
+});
 
 const Bookings: React.FC = () => {
+  const { user } = useAuth();
+  const isOwner = user?.role === 'Owner';
+
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [halls, setHalls] = useState<Hall[]>([]);
+  const [venues, setVenues] = useState<Venue[]>([]);
+  const [events, setEvents] = useState<EventItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [editingBooking, setEditingBooking] = useState<typeof formData | null>(null);
-  const [deleteId, setDeleteId] = useState<number | null>(null);
-  const [viewId, setViewId] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [bookingsList, setBookingsList] = useState<Booking[]>([]);
-  const [formData, setFormData] = useState({
-    eventId: '',
-    numberOfTickets: '1',
-    specialRequests: '',
-  });
-  const [events, setEvents] = useState<Array<{id: number, title: string, ticketPrice?: number}>>([]);
+  const [filterVenue, setFilterVenue] = useState<number | 'all'>('all');
 
-  useEffect(() => {
-    loadBookings();
-    loadEvents();
-  }, []);
+  const [showModal, setShowModal] = useState(false);
+  const [viewBooking, setViewBooking] = useState<Booking | null>(null);
+  const [paymentBooking, setPaymentBooking] = useState<Booking | null>(null);
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('Cash');
+  const [paymentTxId, setPaymentTxId] = useState('');
 
-  const loadEvents = async () => {
-    try {
-      const { eventService } = await import('../services');
-      const data = await eventService.getAllEvents();
-      setEvents(data.map(e => ({ id: e.id, title: e.title, ticketPrice: e.ticketPrice })));
-    } catch (error) {
-      console.error('Failed to load events:', error);
-    }
+  const [formData, setFormData] = useState<BookingFormData>(makeDefaultForm(isOwner ? undefined : user?.venueId));
+
+  const authHeaders = {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${localStorage.getItem('token')}`,
   };
 
-  const loadBookings = async () => {
+  useEffect(() => { loadAll(); }, []);
+
+  const loadAll = async () => {
     try {
       setLoading(true);
-      const data = await bookingService.getAllBookings();
-      setBookingsList(data);
-    } catch (error) {
-      console.error('Failed to load bookings:', error);
-      toast.error('Failed to load bookings');
+      const requests: Promise<Response>[] = [
+        fetch('/api/Bookings', { headers: authHeaders }),
+        fetch('/api/Clients', { headers: authHeaders }),
+        fetch('/api/Halls', { headers: authHeaders }),
+        fetch('/api/Event', { headers: authHeaders }),
+      ];
+      if (isOwner) requests.push(fetch('/api/Venues', { headers: authHeaders }));
+
+      const [bookingsRes, clientsRes, hallsRes, eventsRes, venuesRes] = await Promise.all(requests);
+
+      if (bookingsRes.ok) setBookings(await bookingsRes.json());
+      if (clientsRes.ok) setClients(await clientsRes.json());
+      if (hallsRes.ok) setHalls(await hallsRes.json());
+      if (eventsRes.ok) setEvents(await eventsRes.json());
+      if (venuesRes?.ok) setVenues(await venuesRes.json());
+    } catch {
+      toast.error('Failed to load data');
     } finally {
       setLoading(false);
     }
   };
-  const handleDelete = async () => {
-    if (deleteId) {
-      try {
-        await bookingService.deleteBooking(deleteId);
-        await loadBookings();
-        toast.success('Booking deleted successfully!');
-      } catch (error) {
-        console.error('Failed to delete booking:', error);
-        toast.error('Failed to delete booking');
-      } finally {
-        setDeleteId(null);
+
+  const formVenueId = isOwner ? formData.venueId : (user?.venueId ?? 0);
+  const formHalls = formVenueId ? halls.filter(h => h.venueId === formVenueId) : halls;
+  const formEvents = formVenueId ? events.filter(e => e.venueId === formVenueId) : events;
+  const searchedClients = formData.clientSearch.trim()
+    ? clients.filter(c =>
+        `${c.firstName} ${c.secondName}`.toLowerCase().includes(formData.clientSearch.toLowerCase()) ||
+        (c.phone ?? '').includes(formData.clientSearch) ||
+        (c.cNIC ?? '').includes(formData.clientSearch)
+      )
+    : clients;
+
+  const update = (patch: Partial<BookingFormData>) => setFormData(f => ({ ...f, ...patch }));
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      let clientId = formData.clientId;
+
+      if (formData.newClientMode) {
+        if (!formData.newClientFirstName || !formData.newClientPhone) {
+          toast.error('Client name and phone are required');
+          setSaving(false);
+          return;
+        }
+        const clientRes = await fetch('/api/Clients', {
+          method: 'POST',
+          headers: authHeaders,
+          body: JSON.stringify({
+            firstName: formData.newClientFirstName,
+            secondName: formData.newClientLastName,
+            phone: formData.newClientPhone,
+            email: formData.newClientEmail || undefined,
+            cnic: formData.newClientCNIC || undefined,
+          }),
+        });
+        if (!clientRes.ok) {
+          const err = await clientRes.json().catch(() => ({}));
+          toast.error((err as { message?: string }).message || 'Failed to create client');
+          setSaving(false);
+          return;
+        }
+        const newClient: Client = await clientRes.json();
+        clientId = newClient.id;
+        setClients(prev => [...prev, newClient]);
       }
+
+      if (!clientId) { toast.error('Please select or add a client'); setSaving(false); return; }
+      if (!formData.eventId) { toast.error('Please select an event'); setSaving(false); return; }
+
+      const res = await fetch('/api/Bookings', {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify({
+          clientId,
+          eventId: formData.eventId,
+          hallId: formData.hallId || undefined,
+          numberOfGuests: parseInt(formData.numberOfGuests) || 1,
+          totalAmount: parseFloat(formData.totalAmount) || 0,
+          depositAmount: parseFloat(formData.depositAmount) || 0,
+          paymentMethod: formData.paymentMethod || undefined,
+          specialRequests: formData.specialRequests || undefined,
+        }),
+      });
+
+      if (res.ok) {
+        toast.success('Booking created');
+        setShowModal(false);
+        setFormData(makeDefaultForm(isOwner ? undefined : user?.venueId));
+        loadAll();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        toast.error((err as { message?: string }).message || 'Failed to create booking');
+      }
+    } catch {
+      toast.error('Failed to create booking');
+    } finally {
+      setSaving(false);
     }
   };
 
-  const handleApprove = async (bookingId: number) => {
+  const handleApprove = async (id: number) => {
+    const res = await fetch(`/api/Bookings/${id}/approve`, { method: 'POST', headers: authHeaders });
+    if (res.ok) { toast.success('Booking approved'); loadAll(); }
+    else toast.error('Failed to approve');
+  };
+
+  const handleReject = async (id: number) => {
+    if (!confirm('Reject this booking?')) return;
+    const res = await fetch(`/api/Bookings/${id}/reject`, { method: 'POST', headers: authHeaders });
+    if (res.ok) { toast.success('Booking rejected'); loadAll(); }
+    else toast.error('Failed to reject');
+  };
+
+  const handleCancel = async (id: number) => {
+    if (!confirm('Cancel this booking?')) return;
+    const res = await fetch(`/api/Bookings/${id}`, { method: 'DELETE', headers: authHeaders });
+    if (res.ok) { toast.success('Booking cancelled'); loadAll(); }
+    else toast.error('Failed to cancel');
+  };
+
+  const handlePayment = async () => {
+    if (!paymentBooking || !paymentAmount) return;
+    setSaving(true);
     try {
-      await bookingService.approveBooking(bookingId);
-      await loadBookings();
-      toast.success('Booking approved successfully!');
-    } catch (error) {
-      console.error('Failed to approve booking:', error);
-      toast.error('Failed to approve booking');
+      const res = await fetch(`/api/Bookings/${paymentBooking.id}/payment`, {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify({
+          bookingId: paymentBooking.id,
+          amount: parseFloat(paymentAmount),
+          paymentMethod,
+          transactionId: paymentTxId || undefined,
+        }),
+      });
+      if (res.ok) {
+        toast.success('Payment recorded');
+        setPaymentBooking(null);
+        loadAll();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        toast.error((err as { message?: string }).message || 'Failed to record payment');
+      }
+    } catch {
+      toast.error('Failed to record payment');
+    } finally {
+      setSaving(false);
     }
   };
 
-  const handleReject = async (bookingId: number) => {
-    try {
-      await bookingService.rejectBooking(bookingId);
-      await loadBookings();
-      toast.success('Booking rejected successfully!');
-    } catch (error) {
-      console.error('Failed to reject booking:', error);
-      toast.error('Failed to reject booking');
-    }
-  };
-
-  const handleEdit = (booking: Booking) => {
-    const formDataObj = {
-      eventId: String(booking.eventId ?? ''),
-      numberOfTickets: String(booking.numberOfTickets ?? 1),
-      specialRequests: booking.specialRequests ?? '',
-    };
-    setEditingBooking(formDataObj);
-    setFormData(formDataObj);
-    setShowAddModal(true);
-  };
-
-  const statusMap: Record<string, number> = {
-    confirmed: 1,
-    pending: 0,
-    cancelled: 2,
-    completed: 3, // treat completed as checked-in
-  };
-
-  const filteredBookings = bookingsList.filter((booking) => {
-    const matchesSearch = (booking.bookingReference || String(booking.eventId || ''))
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase());
-    const matchesStatus =
-      filterStatus === 'all' || booking.status === statusMap[filterStatus as keyof typeof statusMap];
-    return matchesSearch && matchesStatus;
+  const filteredBookings = bookings.filter(b => {
+    const q = searchTerm.toLowerCase();
+    const matchesSearch =
+      b.bookingReference.toLowerCase().includes(q) ||
+      b.clientName.toLowerCase().includes(q) ||
+      (b.clientPhone ?? '').includes(searchTerm) ||
+      (b.clientCNIC ?? '').includes(searchTerm);
+    const matchesStatus = filterStatus === 'all' || b.status === filterStatus;
+    const matchesVenue = filterVenue === 'all' ||
+      b.marqueName === venues.find(v => v.id === filterVenue)?.name;
+    return matchesSearch && matchesStatus && matchesVenue;
   });
 
-  const getStatusColor = (status: number) => {
-    switch (status) {
-      case 1: // Confirmed
-        return 'bg-green-100 text-green-800';
-      case 0: // Pending
-        return 'bg-yellow-100 text-yellow-800';
-      case 2: // Cancelled
-        return 'bg-red-100 text-red-800';
-      case 3: // Checked In
-        return 'bg-blue-100 text-blue-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  // Removed unused getPaymentStatusColor helper
+  const totalPaid = bookings.reduce((s, b) => s + b.amountPaid, 0);
+  const totalBalance = bookings.reduce((s, b) => s + (b.totalAmount - b.amountPaid), 0);
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Bookings</h1>
-          <p className="mt-2 text-gray-600">Manage venue bookings and reservations</p>
+          <h1 className="text-2xl font-bold text-gray-900">Bookings</h1>
+          <p className="text-gray-600 mt-1">Manage hall bookings and client reservations</p>
         </div>
-        <button 
-          onClick={() => {
-            setEditingBooking(null);
-            setFormData({ eventId: '', numberOfTickets: '1', specialRequests: '' });
-            setShowAddModal(true);
-          }}
-          className="mt-4 sm:mt-0 btn-primary flex items-center"
+        <button
+          onClick={() => { setFormData(makeDefaultForm(isOwner ? undefined : user?.venueId)); setShowModal(true); }}
+          className="btn-primary flex items-center gap-2"
         >
-          <FiPlus className="mr-2 h-5 w-5" />
+          <FiPlus className="w-4 h-4" />
           New Booking
         </button>
       </div>
 
-      {/* Filters and Search */}
-      <div className="card p-6">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
-          {/* Search */}
-          <div className="relative flex-1 max-w-md">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <FiSearch className="h-5 w-5 text-gray-400" />
-            </div>
+      {/* Summary */}
+      <div className="grid grid-cols-3 gap-4">
+        <div className="card p-4 text-center">
+          <p className="text-2xl font-bold text-gray-900">{bookings.length}</p>
+          <p className="text-sm text-gray-500">Total Bookings</p>
+        </div>
+        <div className="card p-4 text-center">
+          <p className="text-xl font-bold text-emerald-600">{fmt(totalPaid)}</p>
+          <p className="text-sm text-gray-500">Collected</p>
+        </div>
+        <div className="card p-4 text-center">
+          <p className="text-xl font-bold text-orange-600">{fmt(totalBalance)}</p>
+          <p className="text-sm text-gray-500">Balance Due</p>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="card p-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="relative">
+            <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
-              placeholder="Search bookings..."
+              placeholder="Search client, ref, CNIC..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="block w-full pl-10 pr-10 py-2 rounded-md border border-gray-300"
+              className="input pl-10 w-full focus:outline-none"
             />
           </div>
-
-          {/* Filter Buttons */}
-          <div className="flex items-center space-x-3">
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="input focus:outline-none"
+          >
+            <option value="all">All Statuses</option>
+            <option value="Pending">Pending</option>
+            <option value="Confirmed">Confirmed</option>
+            <option value="CheckedIn">Checked In</option>
+            <option value="Cancelled">Cancelled</option>
+          </select>
+          {isOwner && (
             <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none text-sm"
+              value={filterVenue}
+              onChange={(e) => setFilterVenue(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+              className="input focus:outline-none"
             >
-              <option value="all">All Status</option>
-              <option value="confirmed">Confirmed</option>
-              <option value="pending">Pending</option>
-              <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
+              <option value="all">All Marques</option>
+              {venues.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
             </select>
-          </div>
+          )}
         </div>
       </div>
 
-      {/* Bookings Table */}
-      <div className="card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Booking ID
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Client
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Event & Venue
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Date & Time
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Amount
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Payment
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Approval
-                </th>
-                <th className="px-6 py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {loading ? (
+      {/* Table */}
+      {loading ? (
+        <div className="card p-8 text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto" />
+          <p className="mt-4 text-gray-600">Loading bookings...</p>
+        </div>
+      ) : filteredBookings.length === 0 ? (
+        <div className="card p-8 text-center">
+          <FiCalendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+          <p className="text-gray-600">No bookings found</p>
+        </div>
+      ) : (
+        <div className="card overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <td colSpan={9} className="px-6 py-12 text-center text-gray-500">
-                    Loading bookings...
-                  </td>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Ref</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Client</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Hall / Marque</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Event</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Guests</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Amount</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Payment</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Status</th>
+                  <th className="text-right px-4 py-3 text-xs font-medium text-gray-500 uppercase">Actions</th>
                 </tr>
-              ) : filteredBookings.length === 0 ? (
-                <tr>
-                  <td colSpan={9} className="px-6 py-12 text-center text-gray-500">
-                    No bookings found
-                  </td>
-                </tr>
-              ) : filteredBookings.map((booking) => (
-                <tr key={booking.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-primary-600">BK-{booking.id}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="shrink-0 h-8 w-8">
-                        <div className="h-8 w-8 rounded-full bg-linear-to-r from-primary-600 to-cyan-600 flex items-center justify-center">
-                          <FiUser className="h-4 w-4 text-white" />
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {filteredBookings.map(b => {
+                  const payStatus = getPaymentStatus(b);
+                  const balance = b.totalAmount - b.amountPaid;
+                  return (
+                    <tr key={b.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <div className="text-sm font-semibold text-primary-600">{b.bookingReference}</div>
+                        <div className="text-xs text-gray-400">{new Date(b.bookingDate).toLocaleDateString()}</div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center shrink-0">
+                            <FiUser className="w-4 h-4 text-primary-600" />
+                          </div>
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">{b.clientName}</div>
+                            {b.clientPhone && (
+                              <div className="text-xs text-gray-500 flex items-center gap-1">
+                                <FiPhone className="w-3 h-3" />{b.clientPhone}
+                              </div>
+                            )}
+                            {b.clientCNIC && <div className="text-xs text-gray-400">{b.clientCNIC}</div>}
+                          </div>
                         </div>
-                      </div>
-                      <div className="ml-3">
-                        <div className="text-sm font-medium text-gray-900">User #{booking.userId}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="text-sm text-gray-900">{booking.bookingReference ? `Ref ${booking.bookingReference}` : `Event #${booking.eventId || 'N/A'}`}</div>
-                    <div className="flex items-center text-xs text-gray-500 mt-1">
-                      <FiMapPin className="mr-1 h-3 w-3" />
-                      Venue N/A
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center text-sm text-gray-900">
-                      <FiCalendar className="mr-2 h-4 w-4 text-gray-400" />
-                      <div>
-                        <div>{new Date(booking.bookingDate).toLocaleDateString()}</div>
-                        <div className="text-xs text-gray-500">&nbsp;</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm">
-                      <div className="font-semibold text-gray-900">${booking.totalAmount?.toFixed(2) || '0.00'}</div>
-                      <div className="text-xs text-gray-500">
-                        Paid: ${booking.amountPaid?.toFixed(2) || '0.00'}
-                      </div>
-                      {(booking.totalAmount || 0) - (booking.amountPaid || 0) > 0 && (
-                        <div className="text-xs text-red-600 font-medium">
-                          Due: ${((booking.totalAmount || 0) - (booking.amountPaid || 0)).toFixed(2)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="text-sm text-gray-900">{b.hallName ?? '—'}</div>
+                        <div className="text-xs text-gray-500 flex items-center gap-1">
+                          <FiMapPin className="w-3 h-3" />{b.marqueName ?? '—'}
                         </div>
-                      )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="text-sm text-gray-900">{b.eventTitle}</div>
+                        <div className="text-xs text-gray-500 flex items-center gap-1">
+                          <FiCalendar className="w-3 h-3" />
+                          {new Date(b.eventDate).toLocaleDateString()}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1 text-sm text-gray-900">
+                          <FiUsers className="w-3 h-3 text-gray-400" />
+                          {b.numberOfGuests.toLocaleString()}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="text-sm font-semibold text-gray-900">{fmt(b.totalAmount)}</div>
+                        {b.depositAmount > 0 && (
+                          <div className="text-xs text-gray-400">Deposit: {fmt(b.depositAmount)}</div>
+                        )}
+                        {balance > 0 && (
+                          <div className="text-xs text-red-600 font-medium">Due: {fmt(balance)}</div>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`text-xs px-2 py-1 rounded-full font-medium ${PAYMENT_BADGE[payStatus] ?? 'bg-gray-100 text-gray-700'}`}>
+                          {payStatus}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`text-xs px-2 py-1 rounded-full font-medium ${STATUS_COLORS[b.status] ?? 'bg-gray-100 text-gray-700'}`}>
+                          {b.status}
+                        </span>
+                        {!b.isApprovedByAdmin && b.status !== 'Cancelled' && (
+                          <div className="text-xs text-yellow-600 mt-0.5">Needs approval</div>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={() => setViewBooking(b)}
+                            className="p-1.5 hover:bg-gray-100 rounded"
+                            title="View details"
+                          >
+                            <FiEye className="w-4 h-4 text-blue-600" />
+                          </button>
+                          {!b.isApprovedByAdmin && b.status !== 'Cancelled' && (
+                            <>
+                              <button
+                                onClick={() => handleApprove(b.id)}
+                                className="p-1.5 hover:bg-green-50 rounded"
+                                title="Approve"
+                              >
+                                <FiCheck className="w-4 h-4 text-green-600" />
+                              </button>
+                              <button
+                                onClick={() => handleReject(b.id)}
+                                className="p-1.5 hover:bg-red-50 rounded"
+                                title="Reject"
+                              >
+                                <FiX className="w-4 h-4 text-red-500" />
+                              </button>
+                            </>
+                          )}
+                          {balance > 0 && b.status !== 'Cancelled' && (
+                            <button
+                              onClick={() => { setPaymentBooking(b); setPaymentAmount(''); setPaymentMethod('Cash'); setPaymentTxId(''); }}
+                              className="p-1.5 hover:bg-emerald-50 rounded"
+                              title="Record payment"
+                            >
+                              <FiDollarSign className="w-4 h-4 text-emerald-600" />
+                            </button>
+                          )}
+                          {b.status !== 'Cancelled' && (
+                            <button
+                              onClick={() => handleCancel(b.id)}
+                              className="p-1.5 hover:bg-red-50 rounded"
+                              title="Cancel booking"
+                            >
+                              <FiX className="w-4 h-4 text-gray-400 hover:text-red-600" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Create Booking Modal */}
+      {showModal && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => setShowModal(false)}
+        >
+          <div
+            className="bg-white rounded-lg max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-xl font-bold text-gray-900">New Booking</h2>
+              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600">
+                <FiX className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-5">
+              {/* Client Section */}
+              <fieldset className="border border-gray-200 rounded-lg p-4 space-y-3">
+                <legend className="text-sm font-semibold text-gray-700 px-1 flex items-center gap-1">
+                  <FiUser className="w-3.5 h-3.5" /> Client
+                </legend>
+
+                {!formData.newClientMode ? (
+                  <>
+                    <div className="relative">
+                      <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                      <input
+                        type="text"
+                        placeholder="Search by name, phone, or CNIC..."
+                        value={formData.clientSearch}
+                        onChange={(e) => update({ clientSearch: e.target.value, clientId: 0 })}
+                        className="input pl-9 w-full"
+                        autoComplete="off"
+                      />
                     </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {(() => {
-                      const paid = booking.amountPaid || 0;
-                      const total = booking.totalAmount || 0;
-                      let label: 'Paid' | 'Partial' | 'Unpaid' = 'Unpaid';
-                      if (total > 0) {
-                        label = paid >= total ? 'Paid' : paid > 0 ? 'Partial' : 'Unpaid';
-                      } else {
-                        // Zero-priced events should not show Paid unless there was a payment recorded > 0
-                        label = paid > 0 ? 'Paid' : 'Unpaid';
-                      }
-                      const color = label === 'Paid' ? 'bg-emerald-100 text-emerald-800' : label === 'Partial' ? 'bg-orange-100 text-orange-800' : 'bg-red-100 text-red-800';
-                      return (
-                        <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${color}`}>
-                          {label === 'Paid' && <FiCheckCircle className="mr-1 h-3 w-3" />}
-                          {label}
-                        </span>
-                      );
-                    })()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(booking.status)}`}>
-                      {booking.status === 1 ? 'Confirmed' : booking.status === 0 ? 'Pending' : booking.status === 2 ? 'Cancelled' : 'Checked In'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {booking.isApprovedByAdmin ? (
-                      <span className="px-3 py-1 inline-flex items-center text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                        <FiCheck className="mr-1 h-3 w-3" />
-                        Approved
-                      </span>
-                    ) : (
-                      <div className="flex items-center space-x-2">
-                        <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                          Pending Approval
-                        </span>
-                        <button
-                          onClick={() => handleApprove(booking.id)}
-                          className="text-green-600 hover:text-green-800 p-1.5 rounded hover:bg-green-50"
-                          title="Approve booking"
-                        >
-                          <FiCheck className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => handleReject(booking.id)}
-                          className="text-red-600 hover:text-red-800 p-1.5 rounded hover:bg-red-50"
-                          title="Reject booking"
-                        >
-                          <FiX className="h-4 w-4" />
-                        </button>
+
+                    {formData.clientSearch && formData.clientId === 0 && searchedClients.length > 0 && (
+                      <div className="border border-gray-200 rounded-lg max-h-36 overflow-y-auto divide-y divide-gray-100">
+                        {searchedClients.slice(0, 8).map(c => (
+                          <button
+                            key={c.id}
+                            type="button"
+                            onClick={() => update({ clientId: c.id, clientSearch: `${c.firstName} ${c.secondName}` })}
+                            className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center justify-between"
+                          >
+                            <div>
+                              <span className="text-sm font-medium text-gray-900">
+                                {c.firstName} {c.secondName}
+                              </span>
+                              {c.phone && <span className="text-xs text-gray-500 ml-2">{c.phone}</span>}
+                            </div>
+                            {c.cNIC && <span className="text-xs text-gray-400">{c.cNIC}</span>}
+                          </button>
+                        ))}
                       </div>
                     )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex items-center justify-end space-x-2">
-                      <button onClick={() => setViewId(booking.id)} className="text-blue-600 hover:text-blue-800 p-2 rounded-lg hover:bg-blue-50">
-                        <FiEye className="h-4 w-4" />
+
+                    {formData.clientId > 0 ? (
+                      <p className="text-sm text-green-600 flex items-center gap-1">
+                        <FiCheck className="w-4 h-4" /> Client selected
+                        <button
+                          type="button"
+                          onClick={() => update({ clientId: 0, clientSearch: '' })}
+                          className="ml-2 text-gray-400 hover:text-gray-600"
+                        >
+                          <FiX className="w-3 h-3" />
+                        </button>
+                      </p>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => update({ newClientMode: true, clientId: 0, clientSearch: '' })}
+                        className="text-sm text-primary-600 hover:underline flex items-center gap-1"
+                      >
+                        <FiPlus className="w-3 h-3" /> Add new client
                       </button>
-                      <button onClick={() => handleEdit(booking)} className="text-green-600 hover:text-green-800 p-2 rounded-lg hover:bg-green-50">
-                        <FiEdit className="h-4 w-4" />
-                      </button>
-                      {(() => {
-                        const paid = (booking.amountPaid || 0) >= (booking.totalAmount || 0);
-                        const isCancelled = booking.status === 2; // Cancelled
-                        const disableDelete = paid || isCancelled;
-                        return (
-                          <button
-                            onClick={() => {
-                              if (!disableDelete) setDeleteId(booking.id);
-                            }}
-                            disabled={disableDelete}
-                            title={disableDelete ? (paid ? 'Cannot delete a paid booking' : 'Booking already cancelled') : 'Delete booking'}
-                            className={`p-2 rounded-lg ${disableDelete ? 'text-gray-400 cursor-not-allowed' : 'text-red-600 hover:text-red-800 hover:bg-red-50'}`}
-                          >
-                            <FiTrash2 className="h-4 w-4" />
-                          </button>
-                        );
-                      })()}
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">First Name *</label>
+                        <input
+                          type="text"
+                          value={formData.newClientFirstName}
+                          onChange={(e) => update({ newClientFirstName: e.target.value })}
+                          className="input w-full"
+                          placeholder="Ahmad"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">Last Name</label>
+                        <input
+                          type="text"
+                          value={formData.newClientLastName}
+                          onChange={(e) => update({ newClientLastName: e.target.value })}
+                          className="input w-full"
+                          placeholder="Khan"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">Phone *</label>
+                        <input
+                          type="tel"
+                          value={formData.newClientPhone}
+                          onChange={(e) => update({ newClientPhone: e.target.value })}
+                          className="input w-full"
+                          placeholder="0300-1234567"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">CNIC</label>
+                        <input
+                          type="text"
+                          value={formData.newClientCNIC}
+                          onChange={(e) => update({ newClientCNIC: e.target.value })}
+                          className="input w-full"
+                          placeholder="42101-1234567-1"
+                          maxLength={20}
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <label className="block text-xs text-gray-600 mb-1">Email</label>
+                        <input
+                          type="email"
+                          value={formData.newClientEmail}
+                          onChange={(e) => update({ newClientEmail: e.target.value })}
+                          className="input w-full"
+                          placeholder="Optional"
+                        />
+                      </div>
                     </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                    <button
+                      type="button"
+                      onClick={() => update({ newClientMode: false })}
+                      className="text-sm text-gray-500 hover:underline"
+                    >
+                      ← Back to search
+                    </button>
+                  </>
+                )}
+              </fieldset>
 
-        {/* Summary Bar */}
-        <div className="bg-linear-to-r from-primary-50 to-cyan-50 px-6 py-4 border-t border-gray-200">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="text-center">
-              <div className="text-sm text-gray-600">Total Bookings</div>
-              <div className="text-2xl font-bold text-gray-900">{filteredBookings.length}</div>
-            </div>
-            <div className="text-center">
-              <div className="text-sm text-gray-600">Total Revenue</div>
-              <div className="text-2xl font-bold text-emerald-600">
-                ${bookingsList.reduce((sum, b) => sum + (b.totalAmount || 0), 0).toFixed(2)}
+              {/* Location & Event Section */}
+              <fieldset className="border border-gray-200 rounded-lg p-4 space-y-3">
+                <legend className="text-sm font-semibold text-gray-700 px-1 flex items-center gap-1">
+                  <FiMapPin className="w-3.5 h-3.5" /> Location & Event
+                </legend>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {isOwner && (
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">Marque *</label>
+                      <select
+                        value={formData.venueId}
+                        onChange={(e) => update({ venueId: Number(e.target.value), hallId: 0, eventId: 0 })}
+                        className="input w-full"
+                        required
+                      >
+                        <option value={0}>Select marque</option>
+                        {venues.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
+                      </select>
+                    </div>
+                  )}
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">Hall</label>
+                    <select
+                      value={formData.hallId}
+                      onChange={(e) => update({ hallId: Number(e.target.value) })}
+                      className="input w-full"
+                    >
+                      <option value={0}>No specific hall</option>
+                      {formHalls.map(h => (
+                        <option key={h.id} value={h.id}>
+                          {h.name} ({h.capacity.toLocaleString()} guests)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className={isOwner ? 'md:col-span-2' : ''}>
+                    <label className="block text-xs text-gray-600 mb-1">Event *</label>
+                    <select
+                      value={formData.eventId}
+                      onChange={(e) => update({ eventId: Number(e.target.value) })}
+                      className="input w-full"
+                      required
+                    >
+                      <option value={0}>Select event</option>
+                      {formEvents.map(ev => (
+                        <option key={ev.id} value={ev.id}>
+                          {ev.title} — {new Date(ev.date).toLocaleDateString()}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </fieldset>
+
+              {/* Booking Details Section */}
+              <fieldset className="border border-gray-200 rounded-lg p-4 space-y-3">
+                <legend className="text-sm font-semibold text-gray-700 px-1 flex items-center gap-1">
+                  <FiDollarSign className="w-3.5 h-3.5" /> Booking Details
+                </legend>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">Guests *</label>
+                    <input
+                      type="number"
+                      min={1}
+                      value={formData.numberOfGuests}
+                      onChange={(e) => update({ numberOfGuests: e.target.value })}
+                      className="input w-full"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">Payment Method</label>
+                    <select
+                      value={formData.paymentMethod}
+                      onChange={(e) => update({ paymentMethod: e.target.value })}
+                      className="input w-full"
+                    >
+                      {PAYMENT_METHODS.map(m => <option key={m} value={m}>{m}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">Total Amount (₨) *</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={formData.totalAmount}
+                      onChange={(e) => update({ totalAmount: e.target.value })}
+                      className="input w-full"
+                      placeholder="0"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">Deposit Received (₨)</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={formData.depositAmount}
+                      onChange={(e) => update({ depositAmount: e.target.value })}
+                      className="input w-full"
+                      placeholder="0"
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-xs text-gray-600 mb-1">Special Requests</label>
+                    <textarea
+                      value={formData.specialRequests}
+                      onChange={(e) => update({ specialRequests: e.target.value })}
+                      className="input w-full"
+                      rows={2}
+                      placeholder="Any special requirements or notes..."
+                    />
+                  </div>
+                </div>
+              </fieldset>
+
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowModal(false)}
+                  className="flex-1 btn-outline"
+                >
+                  Cancel
+                </button>
+                <button type="submit" disabled={saving} className="flex-1 btn-primary">
+                  {saving ? 'Creating...' : 'Create Booking'}
+                </button>
               </div>
-            </div>
-            <div className="text-center">
-              <div className="text-sm text-gray-600">Pending Payments</div>
-              <div className="text-2xl font-bold text-orange-600">
-                ${bookingsList.reduce((sum, b) => sum + ((b.totalAmount || 0) - (b.amountPaid || 0)), 0).toFixed(2)}
-              </div>
-            </div>
+            </form>
           </div>
         </div>
+      )}
 
-        {/* Pagination */}
-        <div className="bg-gray-50 px-6 py-4 flex items-center justify-between border-t border-gray-200">
-          <div>
-            <p className="text-sm text-gray-700">
-              Showing <span className="font-medium">1</span> to <span className="font-medium">{filteredBookings.length}</span> of{' '}
-              <span className="font-medium">{filteredBookings.length}</span> results
+      {/* View Details Modal */}
+      {viewBooking && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => setViewBooking(null)}
+        >
+          <div
+            className="bg-white rounded-lg max-w-lg w-full p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-gray-900">Booking Details</h2>
+              <button onClick={() => setViewBooking(null)} className="text-gray-400 hover:text-gray-600">
+                <FiX className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="space-y-0 text-sm divide-y divide-gray-100">
+              {[
+                { label: 'Reference', value: <span className="font-semibold text-primary-600">{viewBooking.bookingReference}</span> },
+                { label: 'Date', value: new Date(viewBooking.bookingDate).toLocaleString() },
+                {
+                  label: 'Client',
+                  value: (
+                    <div className="text-right">
+                      <div className="font-medium">{viewBooking.clientName}</div>
+                      {viewBooking.clientPhone && <div className="text-xs text-gray-400">{viewBooking.clientPhone}</div>}
+                      {viewBooking.clientCNIC && <div className="text-xs text-gray-400">{viewBooking.clientCNIC}</div>}
+                    </div>
+                  ),
+                },
+                {
+                  label: 'Hall / Marque',
+                  value: (
+                    <div className="text-right">
+                      <div>{viewBooking.hallName ?? '—'}</div>
+                      <div className="text-xs text-gray-400">{viewBooking.marqueName ?? '—'}</div>
+                    </div>
+                  ),
+                },
+                {
+                  label: 'Event',
+                  value: (
+                    <div className="text-right">
+                      <div>{viewBooking.eventTitle}</div>
+                      <div className="text-xs text-gray-400">{new Date(viewBooking.eventDate).toLocaleDateString()}</div>
+                    </div>
+                  ),
+                },
+                { label: 'Guests', value: viewBooking.numberOfGuests.toLocaleString() },
+                { label: 'Total Amount', value: <span className="font-semibold">{fmt(viewBooking.totalAmount)}</span> },
+                { label: 'Deposit', value: fmt(viewBooking.depositAmount) },
+                { label: 'Paid', value: <span className="text-emerald-600 font-semibold">{fmt(viewBooking.amountPaid)}</span> },
+                { label: 'Balance Due', value: <span className="text-red-600 font-semibold">{fmt(viewBooking.totalAmount - viewBooking.amountPaid)}</span> },
+                {
+                  label: 'Status',
+                  value: (
+                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${STATUS_COLORS[viewBooking.status] ?? 'bg-gray-100 text-gray-700'}`}>
+                      {viewBooking.status}
+                    </span>
+                  ),
+                },
+                ...(viewBooking.specialRequests
+                  ? [{ label: 'Special Requests', value: viewBooking.specialRequests }]
+                  : []),
+                ...(viewBooking.cancellationReason
+                  ? [{ label: 'Cancellation Reason', value: viewBooking.cancellationReason }]
+                  : []),
+              ].map(({ label, value }) => (
+                <div key={label} className="flex justify-between items-start py-2.5">
+                  <span className="text-gray-500 shrink-0 mr-4">{label}</span>
+                  <span>{value}</span>
+                </div>
+              ))}
+            </div>
+            <button onClick={() => setViewBooking(null)} className="mt-5 w-full btn-primary">
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Record Payment Modal */}
+      {paymentBooking && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => setPaymentBooking(null)}
+        >
+          <div
+            className="bg-white rounded-lg max-w-sm w-full p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="text-lg font-bold text-gray-900">Record Payment</h2>
+              <button onClick={() => setPaymentBooking(null)} className="text-gray-400 hover:text-gray-600">
+                <FiX className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-sm text-gray-500 mb-4">
+              {paymentBooking.clientName} — Balance:{' '}
+              <span className="font-semibold text-red-600">
+                {fmt(paymentBooking.totalAmount - paymentBooking.amountPaid)}
+              </span>
             </p>
-          </div>
-          <div>
-            <nav className="relative z-0 inline-flex rounded-lg shadow-sm -space-x-px" aria-label="Pagination">
-              <button className="relative inline-flex items-center px-4 py-2 rounded-l-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
-                Previous
-              </button>
-              <button className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-primary-600 text-sm font-medium text-white">
-                1
-              </button>
-              <button className="relative inline-flex items-center px-4 py-2 rounded-r-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
-                Next
-              </button>
-            </nav>
-          </div>
-        </div>
-      </div>
-
-      {/* Add/Edit Booking Modal */}
-      <Modal 
-        open={showAddModal} 
-        onClose={() => {
-          setShowAddModal(false);
-          setEditingBooking(null);
-        }} 
-        title={editingBooking ? 'Edit Booking' : 'New Booking'}
-      >
-        <form onSubmit={async (e) => {
-          e.preventDefault();
-          try {
-            const eventId = Number(formData.eventId);
-            const numberOfTickets = Number(formData.numberOfTickets);
-            
-            if (!eventId || numberOfTickets < 1) {
-              toast.error('Please select an event and enter valid number of tickets');
-              return;
-            }
-
-            await bookingService.createBooking({
-              eventId,
-              numberOfTickets,
-              specialRequests: formData.specialRequests || undefined
-            });
-            
-            toast.success('Booking created successfully!');
-            setShowAddModal(false);
-            setEditingBooking(null);
-            setFormData({ eventId: '', numberOfTickets: '1', specialRequests: '' });
-            await loadBookings();
-          } catch (error) {
-            console.error('Failed to save booking:', error);
-            toast.error(error instanceof Error ? error.message : 'Failed to create booking');
-          }
-        }} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Event *</label>
-            <select
-              required
-              value={formData.eventId}
-              onChange={(e) => setFormData({...formData, eventId: e.target.value})}
-              className="block w-full px-3 py-2 rounded-md border border-gray-300"
-            >
-              <option value="">Select an event</option>
-              {events.map(event => (
-                <option key={event.id} value={event.id}>
-                  {event.title} {event.ticketPrice ? `- $${event.ticketPrice}` : '(Free)'}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Number of Tickets *</label>
-            <input
-              type="number"
-              required
-              min="1"
-              max="100"
-              value={formData.numberOfTickets}
-              onChange={(e) => setFormData({...formData, numberOfTickets: e.target.value})}
-              className="block w-full px-3 py-2 rounded-md border border-gray-300"
-              placeholder="1"
-            />
-            {formData.eventId && (() => {
-              const event = events.find(e => e.id === Number(formData.eventId));
-              if (event?.ticketPrice) {
-                const total = event.ticketPrice * Number(formData.numberOfTickets || 0);
-                return (
-                  <p className="mt-1 text-sm text-gray-600">
-                    Total: ${total.toFixed(2)}
-                  </p>
-                );
-              }
-              return null;
-            })()}
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Special Requests</label>
-            <textarea
-              value={formData.specialRequests}
-              onChange={(e) => setFormData({...formData, specialRequests: e.target.value})}
-              className="block w-full px-3 py-2 rounded-md border border-gray-300"
-              placeholder="Any special requirements or requests..."
-              rows={3}
-            />
-          </div>
-          <div className="flex justify-end space-x-3 pt-4">
-            <button
-              type="button"
-              onClick={() => {
-                setShowAddModal(false);
-                setEditingBooking(null);
-              }}
-              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-            <button type="submit" className="btn-primary">
-              Create Booking
-            </button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* View Modal */}
-      <Modal
-        open={viewId !== null}
-        onClose={() => setViewId(null)}
-        title="Booking Details"
-        maxWidthClass="max-w-2xl"
-      >
-        {viewId && bookingsList.find(b => b.id === viewId) && (() => {
-          const booking = bookingsList.find(b => b.id === viewId)!;
-          return (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Booking ID</label>
-                  <p className="text-base font-semibold text-gray-900">BK-{booking.id}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Status</label>
-                  <span className={`inline-block text-sm px-3 py-1 rounded-full font-semibold ${getStatusColor(booking.status)}`}>
-                    {booking.status}
-                  </span>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">User</label>
-                  <p className="text-base text-gray-900">User #{booking.userId}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Venue</label>
-                  <p className="text-base text-gray-900">Venue N/A</p>
-                </div>
-                <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Event</label>
-                  <p className="text-base text-gray-900">Event #{booking.eventId || 'N/A'}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Date</label>
-                  <p className="text-base text-gray-900">{new Date(booking.bookingDate).toLocaleDateString()}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Time</label>
-                  <p className="text-base text-gray-900">&nbsp;</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Total Amount</label>
-                  <p className="text-lg font-bold text-gray-900">${booking.totalAmount?.toFixed(2) || '0.00'}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Deposit Paid</label>
-                  <p className="text-base text-green-600 font-semibold">${booking.amountPaid?.toFixed(2) || '0.00'}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Remaining</label>
-                  <p className="text-base text-red-600 font-semibold">${((booking.totalAmount || 0) - (booking.amountPaid || 0)).toFixed(2)}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Payment Status</label>
-                  {(() => {
-                    const paid = booking.amountPaid || 0;
-                    const total = booking.totalAmount || 0;
-                    const label = paid >= total ? 'Paid' : paid > 0 ? 'Partial' : 'Unpaid';
-                    const color = label === 'Paid' ? 'bg-emerald-100 text-emerald-800' : label === 'Partial' ? 'bg-orange-100 text-orange-800' : 'bg-red-100 text-red-800';
-                    return (
-                      <span className={`inline-block text-sm px-3 py-1 rounded-full font-semibold ${color}`}>
-                        {label}
-                      </span>
-                    );
-                  })()}
-                </div>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Amount Received (₨) *</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={paymentAmount}
+                  onChange={(e) => setPaymentAmount(e.target.value)}
+                  className="input w-full"
+                  placeholder="0"
+                  autoFocus
+                />
               </div>
-              <div className="flex justify-end pt-4">
-                <button onClick={() => setViewId(null)} className="btn-primary">
-                  Close
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Method *</label>
+                <select
+                  value={paymentMethod}
+                  onChange={(e) => setPaymentMethod(e.target.value)}
+                  className="input w-full"
+                >
+                  {PAYMENT_METHODS.map(m => <option key={m} value={m}>{m}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Transaction ID</label>
+                <input
+                  type="text"
+                  value={paymentTxId}
+                  onChange={(e) => setPaymentTxId(e.target.value)}
+                  className="input w-full"
+                  placeholder="Optional"
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setPaymentBooking(null)}
+                  className="flex-1 btn-outline"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handlePayment}
+                  disabled={saving || !paymentAmount}
+                  className="flex-1 btn-primary"
+                >
+                  {saving ? 'Saving...' : 'Record'}
                 </button>
               </div>
             </div>
-          );
-        })()}
-      </Modal>
-
-      {/* Delete Confirmation Modal */}
-      <Modal
-        open={deleteId !== null}
-        onClose={() => setDeleteId(null)}
-        title="Confirm Delete"
-        maxWidthClass="max-w-md"
-      >
-        <div className="space-y-4">
-          <p className="text-gray-700">Are you sure you want to delete this booking? This action cannot be undone.</p>
-          <div className="flex justify-end space-x-3 pt-2">
-            <button
-              onClick={() => setDeleteId(null)}
-              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleDelete}
-              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
-            >
-              Delete
-            </button>
           </div>
         </div>
-      </Modal>
+      )}
     </div>
   );
 };
